@@ -1,0 +1,184 @@
+# =============================================================================
+# CI/CD Pipeline - Stellar Smart Contract DApp
+# Triggers on push to main and pull requests
+# =============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint - Check code quality
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: packages/frontend
+
+      - name: Lint backend
+        run: npm run lint
+        working-directory: packages/backend
+
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: packages/frontend
+
+  # ---------------------------------------------------------------------------
+  # Test - Run backend tests with PostgreSQL and Redis
+  # ---------------------------------------------------------------------------
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: stellar_dapp_test
+          POSTGRES_USER: stellar_user
+          POSTGRES_PASSWORD: stellar_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stellar_user -d stellar_dapp_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: packages/backend
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        working-directory: packages/backend
+        env:
+          DATABASE_URL: postgresql://stellar_user:stellar_password@localhost:5432/stellar_dapp_test
+
+      - name: Run backend tests
+        run: npm test
+        working-directory: packages/backend
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://stellar_user:stellar_password@localhost:5432/stellar_dapp_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-jwt-secret-for-ci
+          STELLAR_NETWORK: testnet
+          STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+          SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+          PORT: 3001
+
+  # ---------------------------------------------------------------------------
+  # Build - Verify backend and frontend build successfully
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: packages/frontend
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: packages/backend
+
+      - name: Build backend
+        run: npm run build
+        working-directory: packages/backend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: packages/frontend
+
+  # ---------------------------------------------------------------------------
+  # Docker Build - Verify Docker images build successfully (main branch only)
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [test-backend, build]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: docker build -t stellar-dapp-backend:${{ github.sha }} ./packages/backend
+
+      - name: Build frontend Docker image
+        run: docker build -t stellar-dapp-frontend:${{ github.sha }} ./packages/frontend

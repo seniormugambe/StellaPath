@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User management model
+model User {
+  id                    String   @id @default(cuid())
+  walletAddress         String   @unique
+  email                 String?
+  displayName           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // User preferences stored as JSON
+  preferences           Json     @default("{}")
+  notificationSettings  Json     @default("{}")
+  
+  // Relations
+  invoicesCreated       InvoiceRecord[]     @relation("InvoiceCreator")
+  transactions          TransactionRecord[]
+  escrows               EscrowRecord[]      @relation("EscrowCreator")
+  notifications         NotificationRecord[]
+  
+  @@map("users")
+}
+
+// Invoice storage model
+model InvoiceRecord {
+  id            String        @id @default(cuid())
+  creatorId     String
+  clientEmail   String
+  amount        Decimal       @db.Decimal(20, 7) // Supports Stellar's 7 decimal precision
+  description   String
+  status        InvoiceStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  dueDate       DateTime
+  approvedAt    DateTime?
+  executedAt    DateTime?
+  txHash        String?
+  approvalToken String        @unique @default(cuid())
+  metadata      Json          @default("{}")
+  
+  // Relations
+  creator       User          @relation("InvoiceCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  @@map("invoice_records")
+}
+
+// Transaction history model
+model TransactionRecord {
+  id          String            @id @default(cuid())
+  userId      String
+  type        TransactionType
+  txHash      String            @unique
+  status      TransactionStatus @default(PENDING)
+  amount      Decimal           @db.Decimal(20, 7) // Supports Stellar's 7 decimal precision
+  sender      String
+  recipient   String
+  timestamp   DateTime          @default(now())
+  blockHeight Int?
+  fees        Decimal           @db.Decimal(20, 7) @default(0)
+  metadata    Json              @default("{}")
+  
+  // Relations
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("transaction_records")
+}
+
+// Escrow tracking model
+model EscrowRecord {
+  id          String        @id @default(cuid())
+  contractId  String        @unique // Smart contract identifier
+  creatorId   String
+  recipientId String?       // Optional, might be set later
+  amount      Decimal       @db.Decimal(20, 7) // Supports Stellar's 7 decimal precision
+  status      EscrowStatus  @default(ACTIVE)
+  conditions  Json          @default("[]") // Array of conditions stored as JSON
+  createdAt   DateTime      @default(now())
+  expiresAt   DateTime
+  releasedAt  DateTime?
+  txHash      String?
+  
+  // Relations
+  creator     User          @relation("EscrowCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  @@map("escrow_records")
+}
+
+// Notifications model
+model NotificationRecord {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  actionUrl String?
+  metadata  Json             @default("{}")
+  
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notification_records")
+}
+
+// Enums
+enum TransactionType {
+  BASIC
+  ESCROW
+  P2P
+  INVOICE
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  APPROVED
+  EXECUTED
+  REJECTED
+  EXPIRED
+}
+
+enum EscrowStatus {
+  ACTIVE
+  CONDITIONS_MET
+  RELEASED
+  REFUNDED
+  EXPIRED
+}
+
+enum NotificationType {
+  INVOICE_RECEIVED
+  INVOICE_APPROVED
+  INVOICE_REJECTED
+  TRANSACTION_CONFIRMED
+  ESCROW_RELEASED
+  ESCROW_REFUNDED
+  SYSTEM_ALERT
+}

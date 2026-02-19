@@ -1,0 +1,1821 @@
+openapi: 3.0.3
+info:
+  title: Stellar Smart Contract DApp API
+  description: |
+    REST API for the Stellar Smart Contract DApp — a comprehensive transaction management
+    system built on the Stellar blockchain. Supports basic transactions, escrow services,
+    peer-to-peer payments, and invoice management with Soroban smart contracts.
+
+    ## Authentication
+    Most endpoints require a JWT Bearer token obtained via wallet signature authentication.
+    Include the token in the `Authorization` header as `Bearer <token>`.
+
+    ## Client Portal
+    Invoice approval/rejection endpoints under the **Client Portal** tag are public and
+    use approval tokens instead of JWT authentication.
+
+    ## Rate Limiting
+    - General endpoints: 100 requests per 15-minute window
+    - Auth & mutation endpoints (`/api/users/auth`, `/api/invoices/approve`, `/api/invoices/reject`): 10 requests per minute
+  version: 1.0.0
+  contact:
+    name: Stellar DApp Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+  - url: https://api.your-domain.com
+    description: Production
+
+tags:
+  - name: Health
+    description: Server health check
+  - name: Users
+    description: User registration, authentication, and profile management
+  - name: Transactions
+    description: Transaction creation, history, and status tracking
+  - name: Invoices
+    description: Invoice creation, management, and execution
+  - name: Escrow
+    description: Escrow creation, condition monitoring, release, and refund
+  - name: Client Portal
+    description: Public endpoints for invoice approval/rejection via token
+  - name: Notifications
+    description: User notification management
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from POST /api/users/auth
+
+  schemas:
+    # ── Error ──────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Amount must be positive
+            recovery:
+              type: string
+              example: Please provide a valid positive amount
+
+    # ── Pagination ─────────────────────────────────────────────────────
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 42
+        totalPages:
+          type: integer
+          example: 3
+        hasNext:
+          type: boolean
+          example: true
+        hasPrev:
+          type: boolean
+          example: false
+
+    # ── User ───────────────────────────────────────────────────────────
+    UserPreferences:
+      type: object
+      properties:
+        currency:
+          type: string
+          example: USD
+        timezone:
+          type: string
+          example: America/New_York
+        language:
+          type: string
+          example: en
+        emailNotifications:
+          type: boolean
+          example: true
+        pushNotifications:
+          type: boolean
+          example: false
+
+    NotificationSettings:
+      type: object
+      properties:
+        invoiceUpdates:
+          type: boolean
+          example: true
+        transactionConfirmations:
+          type: boolean
+          example: true
+        escrowUpdates:
+          type: boolean
+          example: true
+        systemAlerts:
+          type: boolean
+          example: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        walletAddress:
+          type: string
+          example: GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMHV
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        displayName:
+          type: string
+          example: Alice
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        notificationSettings:
+          $ref: '#/components/schemas/NotificationSettings'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ── Transaction ────────────────────────────────────────────────────
+    TransactionType:
+      type: string
+      enum: [BASIC, ESCROW, P2P, INVOICE]
+
+    TransactionStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, FAILED, CANCELLED]
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        txHash:
+          type: string
+          example: abc123def456...
+        amount:
+          type: number
+          format: double
+          example: 100.5
+        sender:
+          type: string
+          example: GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMHV
+        recipient:
+          type: string
+          example: GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEBD9AFZQ7TM4JRS9A
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        timestamp:
+          type: string
+          format: date-time
+        blockHeight:
+          type: integer
+          nullable: true
+        fees:
+          type: number
+          format: double
+          example: 0.00001
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # ── Invoice ────────────────────────────────────────────────────────
+    InvoiceStatus:
+      type: string
+      enum: [DRAFT, SENT, APPROVED, EXECUTED, REJECTED, EXPIRED]
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientEmail:
+          type: string
+          format: email
+        amount:
+          type: number
+          format: double
+          example: 250.0
+        description:
+          type: string
+          example: Web development services — March 2024
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        dueDate:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        txHash:
+          type: string
+          nullable: true
+        approvalToken:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    PublicInvoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+        description:
+          type: string
+        creatorName:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+
+    # ── Escrow ─────────────────────────────────────────────────────────
+    EscrowStatus:
+      type: string
+      enum: [ACTIVE, CONDITIONS_MET, RELEASED, REFUNDED, EXPIRED]
+
+    Condition:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [time_based, oracle_based, manual_approval]
+        parameters:
+          type: object
+          additionalProperties: true
+        validator:
+          type: string
+
+    ConditionStatus:
+      type: object
+      properties:
+        condition:
+          $ref: '#/components/schemas/Condition'
+        met:
+          type: boolean
+        checkedAt:
+          type: string
+          format: date-time
+        evidence:
+          type: string
+          nullable: true
+
+    Escrow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          example: escrow_a1b2c3d4e5f6...
+        amount:
+          type: number
+          format: double
+          example: 500.0
+        recipientId:
+          type: string
+          nullable: true
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        status:
+          $ref: '#/components/schemas/EscrowStatus'
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        releasedAt:
+          type: string
+          format: date-time
+          nullable: true
+        txHash:
+          type: string
+          nullable: true
+
+    # ── Notification ───────────────────────────────────────────────────
+    NotificationType:
+      type: string
+      enum:
+        - INVOICE_RECEIVED
+        - INVOICE_APPROVED
+        - INVOICE_REJECTED
+        - TRANSACTION_CONFIRMED
+        - ESCROW_RELEASED
+        - ESCROW_REFUNDED
+        - SYSTEM_ALERT
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+          example: Invoice Approved
+        message:
+          type: string
+          example: Your invoice for 250 XLM has been approved.
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        actionUrl:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PATHS
+# ═══════════════════════════════════════════════════════════════════════════════
+paths:
+  # ── Health ─────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Server health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: 1.0.0
+                  environment:
+                    type: string
+                    example: development
+
+  # ── Users ──────────────────────────────────────────────────────────────────
+  /api/users/auth:
+    post:
+      tags: [Users]
+      summary: Authenticate with wallet signature
+      operationId: authenticateWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [walletAddress, signature, message]
+              properties:
+                walletAddress:
+                  type: string
+                  example: GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMHV
+                signature:
+                  type: string
+                  description: Base64-encoded Ed25519 signature
+                message:
+                  type: string
+                  example: Sign this message to authenticate
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    description: JWT Bearer token
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid wallet signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users:
+    post:
+      tags: [Users]
+      summary: Create a new user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [walletAddress]
+              properties:
+                walletAddress:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                displayName:
+                  type: string
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get current authenticated user profile
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user profile by ID
+      operationId: getUserProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '403':
+          description: Unauthorized
+        '404':
+          description: User not found
+    patch:
+      tags: [Users]
+      summary: Update user profile
+      operationId: updateUserProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                displayName:
+                  type: string
+                preferences:
+                  $ref: '#/components/schemas/UserPreferences'
+                notificationSettings:
+                  $ref: '#/components/schemas/NotificationSettings'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '403':
+          description: Unauthorized
+        '404':
+          description: User not found
+    delete:
+      tags: [Users]
+      summary: Delete user account
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User account deleted successfully
+        '403':
+          description: Unauthorized
+
+
+  # ── Transactions ───────────────────────────────────────────────────────────
+  /api/transactions:
+    post:
+      tags: [Transactions]
+      summary: Create a new transaction record
+      operationId: createTransaction
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, txHash, amount, sender, recipient]
+              properties:
+                type:
+                  $ref: '#/components/schemas/TransactionType'
+                txHash:
+                  type: string
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0
+                  exclusiveMinimum: true
+                sender:
+                  type: string
+                recipient:
+                  type: string
+                fees:
+                  type: number
+                  format: double
+                  default: 0
+                metadata:
+                  type: object
+                  additionalProperties: true
+            example:
+              type: P2P
+              txHash: "7d2f8a..."
+              amount: 100.5
+              sender: GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMHV
+              recipient: GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGSNFHEBD9AFZQ7TM4JRS9A
+              fees: 0.00001
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [Transactions]
+      summary: Get transaction history for authenticated user
+      operationId: getTransactionHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: minAmount
+          in: query
+          schema:
+            type: number
+        - name: maxAmount
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: timestamp
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+
+  /api/transactions/stats:
+    get:
+      tags: [Transactions]
+      summary: Get transaction statistics
+      operationId: getTransactionStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Transaction statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  stats:
+                    type: object
+                    additionalProperties: true
+
+  /api/transactions/pending:
+    get:
+      tags: [Transactions]
+      summary: Get pending transactions
+      operationId: getPendingTransactions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pending transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+
+  /api/transactions/hash/{txHash}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction by hash
+      operationId: getTransactionByHash
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: txHash
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Transaction not found
+
+  /api/transactions/{transactionId}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction by ID
+      operationId: getTransaction
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+        '403':
+          description: Unauthorized
+        '404':
+          description: Transaction not found
+
+  /api/transactions/{transactionId}/status:
+    patch:
+      tags: [Transactions]
+      summary: Update transaction status
+      operationId: updateTransactionStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/TransactionStatus'
+                blockHeight:
+                  type: integer
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Invalid status
+        '404':
+          description: Transaction not found
+
+
+  # ── Invoices ───────────────────────────────────────────────────────────────
+  /api/invoices:
+    post:
+      tags: [Invoices]
+      summary: Create a new invoice
+      operationId: createInvoice
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientEmail, amount, description, dueDate]
+              properties:
+                clientEmail:
+                  type: string
+                  format: email
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0
+                  exclusiveMinimum: true
+                description:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date-time
+                  description: Must be in the future
+                metadata:
+                  type: object
+                  additionalProperties: true
+            example:
+              clientEmail: client@example.com
+              amount: 250.0
+              description: "Web development services — March 2024"
+              dueDate: "2025-03-01T00:00:00Z"
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Validation error
+    get:
+      tags: [Invoices]
+      summary: Get invoices for authenticated user
+      operationId: getInvoices
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/InvoiceStatus'
+        - name: clientEmail
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: minAmount
+          in: query
+          schema:
+            type: number
+        - name: maxAmount
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+
+  /api/invoices/stats:
+    get:
+      tags: [Invoices]
+      summary: Get invoice statistics
+      operationId: getInvoiceStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Invoice statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  stats:
+                    type: object
+                    additionalProperties: true
+
+  /api/invoices/{invoiceId}:
+    get:
+      tags: [Invoices]
+      summary: Get invoice by ID
+      operationId: getInvoice
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    $ref: '#/components/schemas/Invoice'
+        '403':
+          description: Unauthorized
+        '404':
+          description: Invoice not found
+
+  /api/invoices/{invoiceId}/status:
+    patch:
+      tags: [Invoices]
+      summary: Update invoice status
+      operationId: updateInvoiceStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/InvoiceStatus'
+                txHash:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        $ref: '#/components/schemas/InvoiceStatus'
+                      approvedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      executedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      txHash:
+                        type: string
+                        nullable: true
+        '400':
+          description: Invalid status
+        '404':
+          description: Invoice not found
+
+  /api/invoices/{invoiceId}/execute:
+    post:
+      tags: [Invoices]
+      summary: Execute an approved invoice (trigger payment)
+      operationId: executeInvoice
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                txHash:
+                  type: string
+      responses:
+        '200':
+          description: Invoice executed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Invoice executed successfully
+                  invoice:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        example: EXECUTED
+                      executedAt:
+                        type: string
+                        format: date-time
+                      txHash:
+                        type: string
+        '400':
+          description: Invoice not in approved state
+        '403':
+          description: Unauthorized
+
+
+  # ── Client Portal (Public) ────────────────────────────────────────────────
+  /api/invoices/public/{approvalToken}:
+    get:
+      tags: [Client Portal]
+      summary: Get public invoice details by approval token
+      operationId: getPublicInvoice
+      parameters:
+        - name: approvalToken
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public invoice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  invoice:
+                    $ref: '#/components/schemas/PublicInvoice'
+        '404':
+          description: Invoice not found or invalid token
+
+  /api/invoices/validate-token:
+    post:
+      tags: [Client Portal]
+      summary: Validate an invoice approval token
+      operationId: validateApprovalToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvalToken]
+              properties:
+                approvalToken:
+                  type: string
+      responses:
+        '200':
+          description: Token validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  valid:
+                    type: boolean
+                  invoice:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      amount:
+                        type: number
+                      description:
+                        type: string
+                      status:
+                        $ref: '#/components/schemas/InvoiceStatus'
+                      dueDate:
+                        type: string
+                        format: date-time
+                  canApprove:
+                    type: boolean
+                  isExpired:
+                    type: boolean
+
+  /api/invoices/approve:
+    post:
+      tags: [Client Portal]
+      summary: Approve an invoice
+      operationId: approveInvoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvalToken]
+              properties:
+                approvalToken:
+                  type: string
+                clientInfo:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    walletAddress:
+                      type: string
+            example:
+              approvalToken: "abc123..."
+              clientInfo:
+                name: Bob
+                email: bob@example.com
+      responses:
+        '200':
+          description: Invoice approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Invoice approved successfully
+                  invoice:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        example: APPROVED
+                      approvedAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: Invoice cannot be approved or has expired
+        '404':
+          description: Invoice not found or invalid token
+
+  /api/invoices/reject:
+    post:
+      tags: [Client Portal]
+      summary: Reject an invoice
+      operationId: rejectInvoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvalToken]
+              properties:
+                approvalToken:
+                  type: string
+                reason:
+                  type: string
+                clientInfo:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+            example:
+              approvalToken: "abc123..."
+              reason: "Budget constraints"
+              clientInfo:
+                email: bob@example.com
+      responses:
+        '200':
+          description: Invoice rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Invoice rejected successfully
+                  invoice:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        example: REJECTED
+        '400':
+          description: Invoice cannot be rejected
+        '404':
+          description: Invoice not found or invalid token
+
+
+  # ── Escrow ─────────────────────────────────────────────────────────────────
+  /api/escrows:
+    post:
+      tags: [Escrow]
+      summary: Create a new escrow
+      operationId: createEscrow
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, conditions, expiresAt]
+              properties:
+                recipientId:
+                  type: string
+                amount:
+                  type: number
+                  format: double
+                  minimum: 0
+                  exclusiveMinimum: true
+                conditions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Condition'
+                  minItems: 1
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: Must be in the future
+            example:
+              recipientId: "550e8400-e29b-41d4-a716-446655440001"
+              amount: 500.0
+              conditions:
+                - type: manual_approval
+                  parameters:
+                    approver: "GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMHV"
+                  validator: "manual"
+              expiresAt: "2025-06-01T00:00:00Z"
+      responses:
+        '201':
+          description: Escrow created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrow:
+                    $ref: '#/components/schemas/Escrow'
+        '400':
+          description: Validation error
+    get:
+      tags: [Escrow]
+      summary: Get escrows for authenticated user
+      operationId: getEscrows
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          description: Filter by role (creator or recipient)
+          schema:
+            type: string
+            enum: [creator, recipient]
+            default: creator
+      responses:
+        '200':
+          description: Escrow list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Escrow'
+
+  /api/escrows/stats:
+    get:
+      tags: [Escrow]
+      summary: Get escrow statistics
+      operationId: getEscrowStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Escrow statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  stats:
+                    type: object
+                    additionalProperties: true
+
+  /api/escrows/active:
+    get:
+      tags: [Escrow]
+      summary: Get active escrows for authenticated user
+      operationId: getActiveEscrows
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active escrows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Escrow'
+
+  /api/escrows/contract/{contractId}:
+    get:
+      tags: [Escrow]
+      summary: Get escrow by contract ID
+      operationId: getEscrowByContractId
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Escrow details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrow:
+                    $ref: '#/components/schemas/Escrow'
+        '403':
+          description: Unauthorized
+        '404':
+          description: Escrow not found
+
+  /api/escrows/{escrowId}:
+    get:
+      tags: [Escrow]
+      summary: Get escrow by ID
+      operationId: getEscrow
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: escrowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Escrow details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrow:
+                    $ref: '#/components/schemas/Escrow'
+        '403':
+          description: Unauthorized
+        '404':
+          description: Escrow not found
+
+  /api/escrows/{escrowId}/conditions:
+    get:
+      tags: [Escrow]
+      summary: Check escrow conditions
+      operationId: checkEscrowConditions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: escrowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Condition statuses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrowId:
+                    type: string
+                  contractId:
+                    type: string
+                  status:
+                    $ref: '#/components/schemas/EscrowStatus'
+                  conditions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConditionStatus'
+                  allConditionsMet:
+                    type: boolean
+        '404':
+          description: Escrow not found
+
+  /api/escrows/{escrowId}/release:
+    post:
+      tags: [Escrow]
+      summary: Release escrow funds to recipient
+      operationId: releaseEscrow
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: escrowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                txHash:
+                  type: string
+      responses:
+        '200':
+          description: Escrow released
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Escrow funds released successfully
+                  escrow:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      contractId:
+                        type: string
+                      status:
+                        type: string
+                        example: RELEASED
+                      releasedAt:
+                        type: string
+                        format: date-time
+                      txHash:
+                        type: string
+        '400':
+          description: Escrow cannot be released
+        '403':
+          description: Only the creator can release
+
+  /api/escrows/{escrowId}/refund:
+    post:
+      tags: [Escrow]
+      summary: Refund escrow funds to sender
+      operationId: refundEscrow
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: escrowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                txHash:
+                  type: string
+      responses:
+        '200':
+          description: Escrow refunded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Escrow funds refunded successfully
+                  escrow:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      contractId:
+                        type: string
+                      status:
+                        type: string
+                        example: REFUNDED
+                      releasedAt:
+                        type: string
+                        format: date-time
+                      txHash:
+                        type: string
+        '400':
+          description: Escrow cannot be refunded (not expired or wrong status)
+        '403':
+          description: Only the creator can request refund
+
+  /api/escrows/{escrowId}/status:
+    patch:
+      tags: [Escrow]
+      summary: Update escrow status
+      operationId: updateEscrowStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: escrowId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/EscrowStatus'
+                txHash:
+                  type: string
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  escrow:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      contractId:
+                        type: string
+                      status:
+                        $ref: '#/components/schemas/EscrowStatus'
+                      releasedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      txHash:
+                        type: string
+                        nullable: true
+        '400':
+          description: Invalid status
+        '403':
+          description: Only the creator can update status
+        '404':
+          description: Escrow not found

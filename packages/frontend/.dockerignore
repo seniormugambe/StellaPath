@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+.eslintrc.cjs
+jest.config.cjs
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+README.md
+SETUP_SUMMARY.md
+THEME_GUIDE.md
+UI_UX_IMPROVEMENTS.md
+WALLET_INTEGRATION_SUMMARY.md
