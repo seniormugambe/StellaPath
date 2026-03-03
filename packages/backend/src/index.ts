@@ -24,6 +24,7 @@ import userRoutes from './routes/userRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
 import escrowRoutes from './routes/escrowRoutes';
+import p2pRoutes from './routes/p2pRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -37,13 +38,30 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-eval'", // Required for wallet integrations (Freighter, Albedo)
+        "'unsafe-inline'", // Required for some wallet libraries
+        'https://albedo.link', // Albedo wallet domain
+        'https://*.stellar.org' // Stellar network domains
+      ],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'https://horizon-testnet.stellar.org', 'https://soroban-testnet.stellar.org'],
+      connectSrc: [
+        "'self'", 
+        'https://horizon-testnet.stellar.org', 
+        'https://soroban-testnet.stellar.org',
+        'https://horizon.stellar.org', // Mainnet horizon
+        'https://albedo.link', // Albedo wallet
+        'wss://horizon-testnet.stellar.org', // WebSocket connections
+        'wss://horizon.stellar.org' // Mainnet WebSocket
+      ],
       fontSrc: ["'self'", 'https:', 'data:'],
       objectSrc: ["'none'"],
-      frameSrc: ["'none'"],
+      frameSrc: [
+        "'none'",
+        'https://albedo.link' // Allow Albedo wallet frames
+      ],
       baseUri: ["'self'"],
       formAction: ["'self'"],
       upgradeInsecureRequests: [],
@@ -59,7 +77,10 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: process.env['CORS_ORIGIN'] || 'http://localhost:3000',
+  origin: [
+    process.env['CORS_ORIGIN'] || 'http://localhost:3000',
+    'http://localhost:3002' // Additional frontend port
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -134,6 +155,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/escrows', escrowRoutes);
+app.use('/api/p2p', p2pRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

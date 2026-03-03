@@ -14,14 +14,18 @@ const conditionSchema = z.object({
 });
 
 export const createEscrowSchema = z.object({
-  recipientId: z.string().uuid('Invalid recipient ID format').optional(),
+  recipientId: z.string().optional(),
+  recipientAddress: z.string().regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar address').optional(),
   amount: z.number().positive('Amount must be positive'),
   conditions: z.array(conditionSchema).min(1, 'At least one condition is required'),
   expiresAt: z.string().datetime().or(z.date()).refine(
     (date) => new Date(date) > new Date(),
     'Expiration date must be in the future'
   )
-});
+}).refine(
+  (data) => data.recipientId || data.recipientAddress,
+  { message: 'Either recipientId or recipientAddress must be provided', path: ['recipientId'] }
+);
 
 export const releaseEscrowSchema = z.object({
   txHash: z.string().length(64, 'Transaction hash must be 64 characters')

@@ -41,7 +41,7 @@ export const useWallet = (): UseWalletReturn => {
   const [availableWallets, setAvailableWallets] = useState<WalletType[]>([])
 
   /**
-   * Load available wallets on mount
+   * Load available wallets on mount and validate persisted connection
    */
   useEffect(() => {
     const loadAvailableWallets = async () => {
@@ -53,8 +53,31 @@ export const useWallet = (): UseWalletReturn => {
       }
     }
 
+    const validatePersistedConnection = async () => {
+      // If wallet state shows connected but we need to validate it's still actually connected
+      if (walletState.connected && walletState.walletType) {
+        try {
+          // For Freighter, check if it's still connected
+          if (walletState.walletType === 'freighter') {
+            const { isConnected } = await import('@stellar/freighter-api')
+            const stillConnected = await isConnected()
+            if (!stillConnected) {
+              console.log('Freighter wallet is no longer connected, clearing state')
+              dispatch(disconnectWallet())
+            }
+          }
+          // Add similar checks for other wallet types if needed
+        } catch (error) {
+          console.error('Failed to validate wallet connection:', error)
+          // If validation fails, clear the connection state
+          dispatch(disconnectWallet())
+        }
+      }
+    }
+
     loadAvailableWallets()
-  }, [])
+    validatePersistedConnection()
+  }, [dispatch, walletState.connected, walletState.walletType])
 
   /**
    * Connect to wallet
@@ -66,8 +89,14 @@ export const useWallet = (): UseWalletReturn => {
     setError(null)
 
     try {
+      console.log('🔗 Starting wallet connection process for:', walletType)
       // Connect to wallet
       const connection = await WalletManager.connect(walletType)
+      console.log('🔗 Wallet connection result:', connection)
+
+      // Authenticate with backend API
+      console.log('🔐 Authenticating with backend API...')
+      await authenticateWithBackend(connection.accountId, walletType)
 
       // Update Redux state
       dispatch(connectWallet({
@@ -76,16 +105,87 @@ export const useWallet = (): UseWalletReturn => {
         walletType: connection.walletType,
       }))
 
-      console.log(`Successfully connected to ${walletType}`)
+      console.log('✅ Successfully connected to', walletType, 'with account:', connection.accountId)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet'
       setError(errorMessage)
-      console.error('Wallet connection error:', err)
+      console.error('❌ Wallet connection error:', err)
       throw err
     } finally {
       setIsConnecting(false)
     }
   }, [dispatch])
+
+  /**
+   * Authenticate wallet with backend API
+   */
+  const authenticateWithBackend = async (walletAddress: string, walletType: WalletType) => {
+    try {
+      console.log('🔐 Authenticating with backend API...')
+      
+      // Create authentication message
+      const timestamp = new Date().toISOString()
+      const message = `Authenticate wallet ${walletAddress} at ${timestamp}`
+      console.log('📝 Authentication message:', message)
+      
+      // Sign the message with the wallet
+      console.log('📝 Requesting wallet signature for authentication...')
+      let signature: string
+      try {
+        signature = await WalletManager.signMessage(walletType, message)
+        console.log('✍️ Received signature:', signature)
+      } catch (signError) {
+        console.error('❌ Wallet message signing failed:', signError)
+
+        // In development, fall back to a dummy signature so that we still
+        // hit the backend auth endpoint and obtain a JWT. The backend is
+        // already configured to relax signature verification in development.
+        if (import.meta.env.MODE === 'development') {
+          console.warn('⚠️ Using development fallback signature for backend auth')
+          signature = 'dev-fallback-signature'
+        } else {
+          throw signError
+        }
+      }
+      
+      // Send authentication request to backend
+      console.log('🌐 Sending authentication request to backend...')
+      const response = await fetch('http://localhost:3001/api/users/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress,
+          signature,
+          message,
+        }),
+      })
+
+      console.log('📡 Backend response status:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Backend authentication failed:', errorData)
+        throw new Error(errorData.error || `Authentication failed: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      console.log('📋 Backend response data:', data)
+      
+      if (data.success && data.token) {
+        // Store the JWT token for API requests
+        localStorage.setItem('authToken', data.token)
+        console.log('✅ Backend authentication successful, token stored')
+      } else {
+        throw new Error(data.error || 'Authentication failed')
+      }
+    } catch (error) {
+      console.error('❌ Backend authentication failed:', error)
+      // Don't throw error - allow wallet connection to succeed even if backend auth fails
+      console.warn('⚠️ Continuing without backend authentication - API calls may fail')
+    }
+  }
 
   /**
    * Disconnect from wallet
@@ -100,10 +200,13 @@ export const useWallet = (): UseWalletReturn => {
         await WalletManager.disconnect(walletState.walletType)
       }
 
+      // Clear auth token
+      localStorage.removeItem('authToken')
+
       // Clear Redux state
       dispatch(disconnectWallet())
 
-      console.log('Successfully disconnected from wallet')
+      console.log('✅ Successfully disconnected from wallet')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to disconnect wallet'
       setError(errorMessage)

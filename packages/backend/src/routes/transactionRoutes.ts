@@ -29,6 +29,8 @@ router.use(authenticateToken);
 // Transaction management
 router.post('/', validateBody(createTransactionSchema), createTransaction);
 router.get('/', getTransactionHistory);
+// Status lookup by hash (alias route for convenience)
+router.get('/status/:txHash', validateParams(txHashParamSchema), getTransactionByHash);
 router.get('/stats', getTransactionStats);
 router.get('/pending', getPendingTransactions);
 router.get('/hash/:txHash', validateParams(txHashParamSchema), getTransactionByHash);

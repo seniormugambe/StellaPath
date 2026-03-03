@@ -84,9 +84,10 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
+        // Don't automatically redirect on 401 - let components handle it
         if (error.response?.status === 401) {
           localStorage.removeItem('authToken')
-          window.location.href = '/'
+          console.warn('API request unauthorized - token may be expired or missing')
         }
         return Promise.reject(error)
       }

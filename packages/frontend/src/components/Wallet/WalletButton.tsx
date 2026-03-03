@@ -25,6 +25,9 @@ export const WalletButton = () => {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    
     if (connected) {
       setAnchorEl(event.currentTarget)
     } else {

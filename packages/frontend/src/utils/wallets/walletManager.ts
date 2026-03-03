@@ -14,6 +14,7 @@ export interface WalletAdapter {
   isAvailable(): Promise<boolean>
   connect(): Promise<WalletConnection>
   signTransaction(request: SignatureRequest): Promise<string>
+  signMessage?(message: string): Promise<string>
   disconnect(): Promise<void>
 }
 
@@ -107,6 +108,38 @@ export class WalletManager {
       return signedXdr
     } catch (error) {
       console.error(`Failed to sign transaction with ${walletType}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Sign a message with the connected wallet
+   * Used for authentication and proving wallet ownership
+   */
+  static async signMessage(
+    walletType: WalletType,
+    message: string
+  ): Promise<string> {
+    const wallet = this.wallets[walletType]
+    
+    if (!wallet) {
+      throw new Error(`Unsupported wallet type: ${walletType}`)
+    }
+
+    if (!wallet.signMessage) {
+      throw new Error(`${walletType} does not support message signing`)
+    }
+
+    try {
+      const signature = await wallet.signMessage(message)
+      
+      if (!signature) {
+        throw new Error('Message signing failed: no signature returned')
+      }
+
+      return signature
+    } catch (error) {
+      console.error(`Failed to sign message with ${walletType}:`, error)
       throw error
     }
   }

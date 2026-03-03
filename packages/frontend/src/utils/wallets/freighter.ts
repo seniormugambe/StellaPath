@@ -3,7 +3,7 @@
  * Provides connection and transaction signing for Freighter wallet
  */
 
-import { isConnected, getPublicKey, signTransaction, getNetwork } from '@stellar/freighter-api'
+import { isConnected, getPublicKey, signTransaction, getNetwork, signBlob } from '@stellar/freighter-api'
 import type { WalletConnection, SignatureRequest } from '../../types'
 
 export class FreighterWallet {
@@ -59,6 +59,77 @@ export class FreighterWallet {
         error instanceof Error 
           ? error.message 
           : 'Failed to connect to Freighter wallet'
+      )
+    }
+  }
+
+  /**
+   * Sign a message with Freighter
+   * Used for authentication and proving wallet ownership
+   */
+  static async signMessage(message: string): Promise<string> {
+    try {
+      console.log('🔐 FreighterWallet.signMessage called with message:', message)
+
+      const available = await this.isAvailable()
+      console.log('🔍 Freighter availability check:', available)
+
+      if (!available) {
+        throw new Error('Freighter wallet is not available')
+      }
+
+      // Use signBlob to sign the message. Different versions of Freighter
+      // return different shapes, so normalise everything to a base64 string.
+      console.log('📝 Calling Freighter signBlob...')
+      const rawSignature = await signBlob(message)
+      console.log('✍️ Freighter signBlob returned:', rawSignature)
+
+      if (!rawSignature) {
+        throw new Error('Message signing was cancelled or failed')
+      }
+
+      let normalizedSignature: string
+
+      if (typeof rawSignature === 'string') {
+        normalizedSignature = rawSignature
+      } else if (rawSignature instanceof Uint8Array) {
+        // Browser-safe conversion of bytes to base64
+        const binary = String.fromCharCode(...rawSignature)
+        normalizedSignature = btoa(binary)
+      } else if (typeof rawSignature === 'object') {
+        // Handle Node Buffer JSON shape: { type: 'Buffer', data: number[] }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const bufLike = rawSignature as any
+        if (
+          bufLike.type === 'Buffer' &&
+          Array.isArray(bufLike.data)
+        ) {
+          const uint = Uint8Array.from(bufLike.data)
+          const binary = String.fromCharCode(...uint)
+          normalizedSignature = btoa(binary)
+        } else {
+          // Common Freighter shape: { publicKey, signature } or { signedMessage }
+          const candidate =
+            bufLike.signature ??
+            bufLike.signedMessage
+
+          if (typeof candidate === 'string' && candidate.length > 0) {
+            normalizedSignature = candidate
+          } else {
+            throw new Error('Unexpected signature format returned from Freighter')
+          }
+        }
+      } else {
+        throw new Error('Unsupported signature type returned from Freighter')
+      }
+
+      return normalizedSignature
+    } catch (error) {
+      console.error('❌ Freighter message signing failed:', error)
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to sign message with Freighter'
       )
     }
   }

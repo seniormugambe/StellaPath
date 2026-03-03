@@ -74,8 +74,9 @@ export const TransactionHistory = ({
     return new Date(date).toLocaleString()
   }
 
-  const formatAmount = (amount: number): string => {
-    return amount.toFixed(7)
+  const formatAmount = (amount: number | string): string => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+    return isNaN(numAmount) ? '0.0000000' : numAmount.toFixed(7)
   }
 
   const openInExplorer = (txHash: string) => {

@@ -44,7 +44,10 @@ export const P2PHistory = ({
   }
 
   const formatDate = (date: string): string => new Date(date).toLocaleString()
-  const formatAmount = (amount: number): string => amount.toFixed(7)
+  const formatAmount = (amount: number | string): string => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+    return isNaN(numAmount) ? '0.0000000' : numAmount.toFixed(7)
+  }
 
   const openInExplorer = (txHash: string) => {
     window.open(`https://stellar.expert/explorer/testnet/tx/${txHash}`, '_blank')

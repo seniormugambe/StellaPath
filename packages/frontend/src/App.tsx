@@ -14,6 +14,8 @@ import './App.css'
 function App() {
   const navigate = useNavigate()
   const { connected } = useAppSelector((state) => state.wallet)
+  
+  console.log('🏠 App render - wallet connected:', connected)
 
   return (
     <Layout>

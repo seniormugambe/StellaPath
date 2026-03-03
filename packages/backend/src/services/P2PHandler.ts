@@ -161,7 +161,8 @@ export class P2PHandler {
         };
       } catch (error) {
         return {
-          valid: false,
+          // The key format is valid, but the account is not funded / not found on network.
+          valid: true,
           exists: false,
           address,
           error: 'Account does not exist on the Stellar network'

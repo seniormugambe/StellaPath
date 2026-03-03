@@ -35,6 +35,8 @@ export const TransactionsPage = () => {
   const [activeTab, setActiveTab] = useState(0)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  console.log('📄 TransactionsPage render - connected:', connected, 'accountId:', accountId)
+
   // Fetch transactions on mount and when wallet changes
   useEffect(() => {
     if (connected && accountId) {
@@ -55,14 +57,21 @@ export const TransactionsPage = () => {
 
     dispatch(setLoading(true))
     try {
-      const response = await apiClient.get<Transaction[]>(`/transactions/${accountId}`)
+      // Backend returns transaction history for the authenticated user at /transactions
+      const response = await apiClient.get<Transaction[]>('/transactions')
       if (response.success && response.data) {
         dispatch(setTransactions(response.data))
       } else {
+        // Handle API errors gracefully - don't prevent page from loading
+        console.warn('Failed to fetch transactions:', response.error)
         dispatch(setError(response.error || 'Failed to fetch transactions'))
       }
     } catch (err) {
-      dispatch(setError('Failed to fetch transactions'))
+      // Handle network/auth errors gracefully
+      console.warn('Failed to fetch transactions:', err)
+      dispatch(setError('Unable to fetch transactions. You can still create new transactions.'))
+    } finally {
+      dispatch(setLoading(false))
     }
   }
 

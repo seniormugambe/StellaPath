@@ -43,6 +43,8 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
     (state) => state.p2p
   )
 
+  const stellarAddressPattern = /^G[A-Z2-7]{55}$/
+
   const [formData, setFormData] = useState<P2PFormData>({
     recipient: '',
     amount: 0,
@@ -53,13 +55,13 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
 
   // Debounced recipient validation
   useEffect(() => {
-    if (formData.recipient.length === 56 && formData.recipient.startsWith('G')) {
+    if (stellarAddressPattern.test(formData.recipient)) {
       const timer = setTimeout(() => validateRecipient(formData.recipient), 500)
       return () => clearTimeout(timer)
     } else {
       dispatch(setRecipientValid(null))
     }
-  }, [formData.recipient])
+  }, [formData.recipient, dispatch])
 
   // Debounced fee estimation
   useEffect(() => {
@@ -78,9 +80,13 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
         `/p2p/validate/${address}`
       )
       if (response.success && response.data) {
+        // For the form, we only block on invalid *format*.
+        // Whether the account exists on the network is surfaced by the backend
+        // but does not hard-block the input here.
         dispatch(setRecipientValid(response.data.valid))
+
         if (!response.data.valid && response.data.error) {
-          setValidationErrors(prev => ({ ...prev, recipient: response.data!.error! }))
+          setValidationErrors(prev => ({ ...prev, recipient: response.data.error! }))
         } else {
           setValidationErrors(prev => {
             const next = { ...prev }
@@ -113,8 +119,8 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
 
     if (!formData.recipient.trim()) {
       errors.recipient = 'Recipient address is required'
-    } else if (formData.recipient.length !== 56 || !formData.recipient.startsWith('G')) {
-      errors.recipient = 'Invalid Stellar address format (must start with G and be 56 characters)'
+    } else if (!stellarAddressPattern.test(formData.recipient)) {
+      errors.recipient = 'Invalid Stellar address format (must start with G, and use only A-Z and 2-7)'
     }
 
     if (formData.amount <= 0) {
@@ -268,12 +274,12 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
               ) : feeEstimate ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   <Chip
-                    label={`Network Fee: ${feeEstimate.estimatedFee.toFixed(7)} XLM`}
+                    label={`Network Fee: ${Number(feeEstimate.estimatedFee).toFixed(7)} XLM`}
                     size="small"
                     variant="outlined"
                   />
                   <Chip
-                    label={`Total Cost: ${feeEstimate.totalCost.toFixed(7)} XLM`}
+                    label={`Total Cost: ${Number(feeEstimate.totalCost).toFixed(7)} XLM`}
                     size="small"
                     color="primary"
                   />

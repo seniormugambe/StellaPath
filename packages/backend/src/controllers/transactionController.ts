@@ -180,21 +180,26 @@ export const getTransactionHistory = asyncHandler(async (req: AuthRequest, res: 
 
   const result = await transactionRepository.findByUserId(req.user.id, filters, pagination);
 
+  const items = result.data.map(tx => ({
+    id: tx.id,
+    type: tx.type,
+    txHash: tx.txHash,
+    amount: tx.amount,
+    sender: tx.sender,
+    recipient: tx.recipient,
+    status: tx.status,
+    timestamp: tx.timestamp,
+    blockHeight: tx.blockHeight,
+    fees: tx.fees,
+    metadata: tx.metadata
+  }));
+
   res.json({
     success: true,
-    transactions: result.data.map(tx => ({
-      id: tx.id,
-      type: tx.type,
-      txHash: tx.txHash,
-      amount: tx.amount,
-      sender: tx.sender,
-      recipient: tx.recipient,
-      status: tx.status,
-      timestamp: tx.timestamp,
-      blockHeight: tx.blockHeight,
-      fees: tx.fees,
-      metadata: tx.metadata
-    })),
+    // Primary envelope used by the frontend ApiClient
+    data: items,
+    // Backwards-compatible alias
+    transactions: items,
     pagination: result.pagination
   });
 });

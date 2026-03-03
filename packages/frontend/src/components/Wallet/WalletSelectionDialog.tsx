@@ -44,12 +44,14 @@ export const WalletSelectionDialog = ({ open, onClose }: WalletSelectionDialogPr
     clearError()
 
     try {
+      console.log('🔗 Connecting to wallet:', walletType)
       await connect(walletType)
+      console.log('✅ Wallet connected successfully, closing dialog')
       // Close dialog on successful connection
       onClose()
     } catch (err) {
       // Error is handled by the hook
-      console.error('Connection failed:', err)
+      console.error('❌ Connection failed:', err)
     } finally {
       setSelectedWallet(null)
     }
@@ -97,7 +99,11 @@ export const WalletSelectionDialog = ({ open, onClose }: WalletSelectionDialogPr
             return (
               <ListItem key={walletType} disablePadding>
                 <ListItemButton
-                  onClick={() => handleWalletSelect(walletType)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleWalletSelect(walletType)
+                  }}
                   disabled={!isAvailable || isConnecting}
                   sx={{
                     border: 1,

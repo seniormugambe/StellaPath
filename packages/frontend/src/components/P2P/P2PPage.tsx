@@ -46,10 +46,14 @@ export const P2PPage = () => {
       if (response.success && response.data) {
         dispatch(setPayments(response.data))
       } else {
+        console.warn('Failed to fetch payment history:', response.error)
         dispatch(setError(response.error || 'Failed to fetch payment history'))
       }
-    } catch {
-      dispatch(setError('Failed to fetch payment history'))
+    } catch (err) {
+      console.warn('Failed to fetch payment history:', err)
+      dispatch(setError('Unable to fetch payment history. You can still send new payments.'))
+    } finally {
+      dispatch(setLoading(false))
     }
   }
 
