@@ -133,11 +133,13 @@ function createMockEscrowRepository() {
 function createMockInvoiceRepository() {
   return {
     create: jest.fn().mockImplementation(async (data: any) => {
+      const totalAmount = data.totalAmount ?? data.amount ?? 0;
       const invoice: InvoiceRecord = {
         id: nextId('invoice'),
         creatorId: data.creatorId,
         clientEmail: data.clientEmail,
-        amount: data.amount,
+        amount: totalAmount,
+        totalAmount,
         description: data.description,
         status: InvoiceStatus.DRAFT,
         createdAt: new Date(),

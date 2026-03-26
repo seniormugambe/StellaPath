@@ -184,7 +184,7 @@ export const TransactionHistory = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredTransactions.map((transaction, index) => (
+              {filteredTransactions.map((transaction) => (
                 <TableRow 
                   key={transaction.id} 
                   hover

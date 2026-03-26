@@ -185,7 +185,7 @@ export const InvoiceDashboard = ({
             <TableHead>
               <TableRow sx={{ bgcolor: 'primary.main' }}>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Client</TableCell>
-                <TableCell align="right" sx={{ color: 'white', fontWeight: 600 }}>Amount (XLM)</TableCell>
+                <TableCell align="right" sx={{ color: 'white', fontWeight: 600 }}>Total Amount (XLM)</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Description</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Status</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Due Date</TableCell>
@@ -208,7 +208,7 @@ export const InvoiceDashboard = ({
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                      {Number(invoice.amount).toFixed(7)}
+                      {Number(invoice.totalAmount).toFixed(7)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -305,9 +305,9 @@ export const InvoiceDashboard = ({
                   </Box>
                 </Grid>
                 <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary">Amount</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {Number(selectedInvoice.amount).toFixed(7)} XLM
+                  <Typography variant="caption" color="text.secondary">Total Amount</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {Number(selectedInvoice.totalAmount).toFixed(7)} XLM
                   </Typography>
                 </Grid>
                 <Grid item xs={6}>

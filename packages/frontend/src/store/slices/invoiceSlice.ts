@@ -4,7 +4,7 @@ import { InvoiceStatus } from '../../types'
 export interface InvoiceListItem {
   id: string
   clientEmail: string
-  amount: number
+  totalAmount: number
   description: string
   status: InvoiceStatus
   dueDate: string

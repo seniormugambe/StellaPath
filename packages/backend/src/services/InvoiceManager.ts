@@ -17,10 +17,15 @@ import type { InvoiceExpirationService } from './InvoiceExpirationService';
 export interface InvoiceParams {
   creatorId: string;
   clientEmail: string;
-  amount: number;
   description: string;
   dueDate: Date;
+  amount?: number;
   metadata?: any;
+  lineItems?: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
 }
 
 export interface InvoiceResult {
@@ -83,13 +88,9 @@ export class InvoiceManager {
     try {
       logger.info('Creating invoice', { 
         creatorId: params.creatorId, 
-        clientEmail: params.clientEmail, 
-        amount: params.amount 
+        clientEmail: params.clientEmail,
+        lineItemsCount: params.lineItems?.length || 0
       });
-
-      if (params.amount <= 0) {
-        return { success: false, error: 'Invoice amount must be positive' };
-      }
 
       if (!params.clientEmail || !this.isValidEmail(params.clientEmail)) {
         return { success: false, error: 'Invalid client email address' };
@@ -99,14 +100,35 @@ export class InvoiceManager {
         return { success: false, error: 'Due date must be in the future' };
       }
 
-      const invoice = await this.invoiceRepository.create({
+      // Validate amount
+      if (params.amount !== undefined) {
+        if (isNaN(params.amount) || params.amount <= 0) {
+          return { success: false, error: 'Invoice amount must be positive' };
+        }
+      }
+
+      // Validate line items
+      if (params.lineItems && params.lineItems.length > 0) {
+        for (const item of params.lineItems) {
+          if (item.quantity <= 0 || item.unitPrice < 0) {
+            return { success: false, error: 'Line item quantity must be positive and unit price cannot be negative' };
+          }
+        }
+      }
+
+      const createInvoiceRequest: any = {
         creatorId: params.creatorId,
         clientEmail: params.clientEmail,
-        amount: params.amount,
         description: params.description,
         dueDate: params.dueDate,
-        metadata: params.metadata || {}
-      });
+        metadata: params.metadata || {},
+        lineItems: params.lineItems || []
+      };
+      if (params.amount !== undefined) {
+        createInvoiceRequest.amount = params.amount;
+      }
+
+      const invoice = await this.invoiceRepository.create(createInvoiceRequest);
 
       logger.info('Invoice created', { invoiceId: invoice.id });
 
@@ -203,11 +225,16 @@ export class InvoiceManager {
         txHash
       });
 
+      const paymentAmount = Number(invoice.totalAmount ?? invoice.amount ?? 0);
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        return { success: false, error: 'Invoice amount is invalid for execution' };
+      }
+
       await this.transactionRepository.create({
         userId: invoice.creatorId,
         type: TransactionType.INVOICE,
         txHash,
-        amount: Number(invoice.amount),
+        amount: paymentAmount,
         sender: 'client',
         recipient: invoice.creatorId,
         fees: 0,

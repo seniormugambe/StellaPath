@@ -86,7 +86,7 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
         dispatch(setRecipientValid(response.data.valid))
 
         if (!response.data.valid && response.data.error) {
-          setValidationErrors(prev => ({ ...prev, recipient: response.data.error! }))
+          setValidationErrors(prev => ({ ...prev, recipient: response.data.error }))
         } else {
           setValidationErrors(prev => {
             const next = { ...prev }

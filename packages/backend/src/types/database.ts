@@ -1,6 +1,7 @@
 import { 
   User as PrismaUser,
   InvoiceRecord as PrismaInvoiceRecord,
+  InvoiceLineItem as PrismaInvoiceLineItem,
   TransactionRecord as PrismaTransactionRecord,
   EscrowRecord as PrismaEscrowRecord,
   NotificationRecord as PrismaNotificationRecord,
@@ -47,8 +48,26 @@ export interface NotificationSettings {
 type LoosePartial<T> = { [K in keyof T]?: T[K] | undefined };
 
 // Extended Invoice type with parsed metadata
-export interface InvoiceRecord extends Omit<PrismaInvoiceRecord, 'metadata'> {
+export interface InvoiceRecord extends Omit<PrismaInvoiceRecord, 'metadata' | 'totalAmount'> {
   metadata: InvoiceMetadata;
+  lineItems?: InvoiceLineItem[];
+  amount?: number;
+  totalAmount?: number;
+}
+
+export interface InvoiceLineItem extends PrismaInvoiceLineItem {}
+
+export interface CreateInvoiceLineItemRequest {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface UpdateInvoiceLineItemRequest {
+  description?: string;
+  quantity?: number;
+  unitPrice?: number;
+  sortOrder?: number;
 }
 
 export interface InvoiceMetadata {
@@ -176,10 +195,11 @@ export interface CreateUserRequest {
 export interface CreateInvoiceRequest {
   creatorId: string;
   clientEmail: string;
-  amount: number;
   description: string;
   dueDate: Date;
+  amount?: number;
   metadata?: InvoiceMetadata;
+  lineItems?: CreateInvoiceLineItemRequest[];
 }
 
 export interface CreateTransactionRequest {

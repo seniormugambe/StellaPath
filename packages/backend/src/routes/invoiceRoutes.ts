@@ -3,6 +3,7 @@
  */
 
 import { Router } from 'express';
+import { z } from 'zod';
 import {
   createInvoice,
   getInvoice,
@@ -13,7 +14,11 @@ import {
   validateApprovalToken,
   approveInvoice,
   rejectInvoice,
-  executeInvoice
+  executeInvoice,
+  addLineItem,
+  updateLineItem,
+  deleteLineItem,
+  reorderLineItems
 } from '../controllers/invoiceController';
 import { authenticateToken, optionalAuth } from '../middleware/auth';
 import { validateBody, validateParams } from '../middleware/validation';
@@ -25,7 +30,11 @@ import {
   executeInvoiceSchema,
   validateTokenSchema,
   invoiceIdParamSchema,
-  approvalTokenParamSchema
+  approvalTokenParamSchema,
+  createLineItemSchema,
+  updateLineItemSchema,
+  reorderLineItemsSchema,
+  lineItemIdParamSchema
 } from '../validators/invoiceValidators';
 
 const router = Router();
@@ -55,5 +64,11 @@ router.post(
   validateBody(executeInvoiceSchema),
   executeInvoice
 );
+
+// Line item management routes
+router.post('/:invoiceId/line-items', validateParams(invoiceIdParamSchema), validateBody(createLineItemSchema), addLineItem);
+router.patch('/:invoiceId/line-items/:itemId', validateParams(z.object({ invoiceId: invoiceIdParamSchema.shape.invoiceId, itemId: lineItemIdParamSchema.shape.itemId })), validateBody(updateLineItemSchema), updateLineItem);
+router.delete('/:invoiceId/line-items/:itemId', validateParams(z.object({ invoiceId: invoiceIdParamSchema.shape.invoiceId, itemId: lineItemIdParamSchema.shape.itemId })), deleteLineItem);
+router.patch('/:invoiceId/line-items/reorder', validateParams(invoiceIdParamSchema), validateBody(reorderLineItemsSchema), reorderLineItems);
 
 export default router;

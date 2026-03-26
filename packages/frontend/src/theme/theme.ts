@@ -1,4 +1,5 @@
-import { createTheme, PaletteMode } from '@mui/material/styles'
+import { createTheme } from '@mui/material/styles'
+import type { PaletteMode } from '@mui/material'
 
 // Sophisticated nude color palette for fintech
 const nudeColors = {

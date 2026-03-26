@@ -5,7 +5,7 @@
  */
 
 import { Response } from 'express';
-import { InvoiceRepository, NotificationRepository } from '../repositories';
+import { InvoiceRepository, NotificationRepository, InvoiceLineItemRepository } from '../repositories';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
@@ -20,6 +20,7 @@ import {
 const logger = createLogger();
 const invoiceRepository = new InvoiceRepository(prisma);
 const notificationRepository = new NotificationRepository(prisma);
+const lineItemRepository = new InvoiceLineItemRepository(prisma);
 
 /**
  * Create a new invoice
@@ -30,11 +31,15 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
     throw new AppError('Not authenticated', 401);
   }
 
-  const { clientEmail, amount, description, dueDate, metadata } = req.body;
+  const { clientEmail, description, dueDate, metadata, lineItems } = req.body;
 
-  // Validate amount
-  if (amount <= 0) {
-    throw new AppError('Amount must be positive', 400);
+  // Validate line items if provided
+  if (lineItems && lineItems.length > 0) {
+    for (const item of lineItems) {
+      if (item.quantity <= 0 || item.unitPrice < 0) {
+        throw new AppError('Line item quantity must be positive and unit price cannot be negative', 400);
+      }
+    }
   }
 
   // Validate due date
@@ -47,10 +52,10 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
   const invoice = await invoiceRepository.create({
     creatorId: req.user.id,
     clientEmail,
-    amount,
     description,
     dueDate: dueDateObj,
-    metadata: metadata || {}
+    metadata: metadata || {},
+    lineItems: lineItems || []
   });
 
   logger.info(`Invoice created: ${invoice.id} for ${clientEmail}`);
@@ -60,13 +65,14 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
     invoice: {
       id: invoice.id,
       clientEmail: invoice.clientEmail,
-      amount: invoice.amount,
+      totalAmount: invoice.totalAmount,
       description: invoice.description,
       status: invoice.status,
       dueDate: invoice.dueDate,
       createdAt: invoice.createdAt,
       approvalToken: invoice.approvalToken,
-      metadata: invoice.metadata
+      metadata: invoice.metadata,
+      lineItems: invoice.lineItems
     }
   });
 });
@@ -94,7 +100,7 @@ export const getInvoice = asyncHandler(async (req: AuthRequest, res: Response) =
     invoice: {
       id: invoice.id,
       clientEmail: invoice.clientEmail,
-      amount: invoice.amount,
+      totalAmount: invoice.totalAmount,
       description: invoice.description,
       status: invoice.status,
       dueDate: invoice.dueDate,
@@ -103,7 +109,8 @@ export const getInvoice = asyncHandler(async (req: AuthRequest, res: Response) =
       executedAt: invoice.executedAt,
       txHash: invoice.txHash,
       approvalToken: invoice.approvalToken,
-      metadata: invoice.metadata
+      metadata: invoice.metadata,
+      lineItems: invoice.lineItems
     }
   });
 });
@@ -282,7 +289,7 @@ export const validateApprovalToken = asyncHandler(async (req: AuthRequest, res: 
     valid: !isExpired && canApprove,
     invoice: {
       id: invoice.id,
-      amount: invoice.amount,
+      amount: invoice.totalAmount,
       description: invoice.description,
       status: invoice.status,
       dueDate: invoice.dueDate
@@ -339,11 +346,11 @@ export const approveInvoice = asyncHandler(async (req: AuthRequest, res: Respons
       userId: invoice.creatorId,
       type: NotificationType.INVOICE_APPROVED,
       title: 'Invoice Approved',
-      message: `Your invoice for ${Number(invoice.amount).toFixed(7)} XLM has been approved by ${clientInfo?.name || clientInfo?.email || 'the client'}. Payment can now be executed.`,
+      message: `Your invoice for ${Number(invoice.totalAmount ?? invoice.amount).toFixed(7)} XLM has been approved by ${clientInfo?.name || clientInfo?.email || 'the client'}. Payment can now be executed.`,
       actionUrl: `/invoices/${invoice.id}`,
       metadata: {
         invoiceId: invoice.id,
-        amount: Number(invoice.amount),
+        amount: Number(invoice.totalAmount ?? invoice.amount),
         clientEmail: invoice.clientEmail
       }
     });
@@ -407,11 +414,11 @@ export const rejectInvoice = asyncHandler(async (req: AuthRequest, res: Response
       userId: invoice.creatorId,
       type: NotificationType.INVOICE_REJECTED,
       title: 'Invoice Declined',
-      message: `Your invoice for ${Number(invoice.amount).toFixed(7)} XLM has been declined by ${clientInfo?.email || 'the client'}.${reasonText}`,
+      message: `Your invoice for ${Number(invoice.totalAmount ?? invoice.amount).toFixed(7)} XLM has been declined by ${clientInfo?.email || 'the client'}.${reasonText}`,
       actionUrl: `/invoices/${invoice.id}`,
       metadata: {
         invoiceId: invoice.id,
-        amount: Number(invoice.amount),
+        amount: Number(invoice.totalAmount ?? invoice.amount),
         clientEmail: invoice.clientEmail,
         rejectionReason: reason
       }
@@ -477,5 +484,183 @@ export const executeInvoice = asyncHandler(async (req: AuthRequest, res: Respons
       executedAt: updatedInvoice.executedAt,
       txHash: updatedInvoice.txHash
     }
+  });
+});
+
+/**
+ * Add line item to invoice
+ * POST /api/invoices/:invoiceId/line-items
+ */
+export const addLineItem = asyncHandler(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('Not authenticated', 401);
+  }
+
+  const { invoiceId } = req.params;
+  const { description, quantity, unitPrice } = req.body;
+
+  // Validate input
+  if (!description || quantity <= 0 || unitPrice < 0) {
+    throw new AppError('Invalid line item data', 400);
+  }
+
+  // Get invoice and verify ownership
+  const invoice = await invoiceRepository.findById(invoiceId);
+  if (!invoice) {
+    throw new AppError('Invoice not found', 404);
+  }
+
+  if (invoice.creatorId !== req.user.id) {
+    throw new AppError('Unauthorized to modify this invoice', 403);
+  }
+
+  // Check if invoice can be modified
+  if (invoice.status !== InvoiceStatus.DRAFT) {
+    throw new AppError('Line items can only be added to draft invoices', 400);
+  }
+
+  // Add line item
+  const lineItem = await lineItemRepository.create(invoiceId, {
+    description,
+    quantity,
+    unitPrice
+  });
+
+  // Recalculate invoice total
+  await invoiceRepository.recalculateTotal(invoiceId);
+
+  logger.info(`Line item added to invoice: ${invoiceId}, item: ${lineItem.id}`);
+
+  res.status(201).json({
+    success: true,
+    lineItem
+  });
+});
+
+/**
+ * Update line item
+ * PATCH /api/invoices/:invoiceId/line-items/:itemId
+ */
+export const updateLineItem = asyncHandler(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('Not authenticated', 401);
+  }
+
+  const { invoiceId, itemId } = req.params;
+  const { description, quantity, unitPrice, sortOrder } = req.body;
+
+  // Get invoice and verify ownership
+  const invoice = await invoiceRepository.findById(invoiceId);
+  if (!invoice) {
+    throw new AppError('Invoice not found', 404);
+  }
+
+  if (invoice.creatorId !== req.user.id) {
+    throw new AppError('Unauthorized to modify this invoice', 403);
+  }
+
+  // Check if invoice can be modified
+  if (invoice.status !== InvoiceStatus.DRAFT) {
+    throw new AppError('Line items can only be modified for draft invoices', 400);
+  }
+
+  // Update line item
+  const updatedItem = await lineItemRepository.update(itemId, {
+    description,
+    quantity,
+    unitPrice,
+    sortOrder
+  });
+
+  // Recalculate invoice total
+  await invoiceRepository.recalculateTotal(invoiceId);
+
+  logger.info(`Line item updated: ${itemId} in invoice: ${invoiceId}`);
+
+  res.json({
+    success: true,
+    lineItem: updatedItem
+  });
+});
+
+/**
+ * Delete line item
+ * DELETE /api/invoices/:invoiceId/line-items/:itemId
+ */
+export const deleteLineItem = asyncHandler(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('Not authenticated', 401);
+  }
+
+  const { invoiceId, itemId } = req.params;
+
+  // Get invoice and verify ownership
+  const invoice = await invoiceRepository.findById(invoiceId);
+  if (!invoice) {
+    throw new AppError('Invoice not found', 404);
+  }
+
+  if (invoice.creatorId !== req.user.id) {
+    throw new AppError('Unauthorized to modify this invoice', 403);
+  }
+
+  // Check if invoice can be modified
+  if (invoice.status !== InvoiceStatus.DRAFT) {
+    throw new AppError('Line items can only be deleted from draft invoices', 400);
+  }
+
+  // Delete line item
+  await lineItemRepository.delete(itemId);
+
+  // Recalculate invoice total
+  await invoiceRepository.recalculateTotal(invoiceId);
+
+  logger.info(`Line item deleted: ${itemId} from invoice: ${invoiceId}`);
+
+  res.json({
+    success: true,
+    message: 'Line item deleted successfully'
+  });
+});
+
+/**
+ * Reorder line items
+ * PATCH /api/invoices/:invoiceId/line-items/reorder
+ */
+export const reorderLineItems = asyncHandler(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    throw new AppError('Not authenticated', 401);
+  }
+
+  const { invoiceId } = req.params;
+  const { itemIds } = req.body;
+
+  if (!Array.isArray(itemIds)) {
+    throw new AppError('itemIds must be an array', 400);
+  }
+
+  // Get invoice and verify ownership
+  const invoice = await invoiceRepository.findById(invoiceId);
+  if (!invoice) {
+    throw new AppError('Invoice not found', 404);
+  }
+
+  if (invoice.creatorId !== req.user.id) {
+    throw new AppError('Unauthorized to modify this invoice', 403);
+  }
+
+  // Check if invoice can be modified
+  if (invoice.status !== InvoiceStatus.DRAFT) {
+    throw new AppError('Line items can only be reordered for draft invoices', 400);
+  }
+
+  // Reorder line items
+  await lineItemRepository.reorder(invoiceId, itemIds);
+
+  logger.info(`Line items reordered for invoice: ${invoiceId}`);
+
+  res.json({
+    success: true,
+    message: 'Line items reordered successfully'
   });
 });

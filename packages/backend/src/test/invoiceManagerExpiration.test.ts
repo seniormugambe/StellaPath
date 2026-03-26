@@ -19,6 +19,7 @@ function createMockInvoice(overrides: Partial<InvoiceRecord> = {}): InvoiceRecor
     creatorId: 'user-1',
     clientEmail: 'client@example.com',
     amount: 500,
+    totalAmount: 500,
     description: 'Test invoice',
     status: InvoiceStatus.SENT,
     createdAt: new Date(Date.now() - 86400000),

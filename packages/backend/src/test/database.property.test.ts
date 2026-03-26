@@ -108,9 +108,12 @@ const createMockPrisma = () => {
     },
     invoiceRecord: {
       create: jest.fn(async ({ data, include }) => {
+        const totalAmount = data.totalAmount ?? data.amount ?? 0;
         const invoice = {
           id: `inv_${Date.now()}_${Math.random()}`,
           ...data,
+          amount: totalAmount,
+          totalAmount,
           createdAt: data.createdAt || new Date(),
           status: data.status || InvoiceStatus.DRAFT,
           approvalToken: data.approvalToken || `token_${Date.now()}`,
@@ -148,6 +151,68 @@ const createMockPrisma = () => {
           invoices = invoices.filter(i => i.creatorId === where.creatorId);
         }
         return invoices.length;
+      })
+    },
+    invoiceLineItem: {
+      create: jest.fn(async ({ data }) => {
+        const lineItem = {
+          id: `lineitem_${Date.now()}_${Math.random()}`,
+          ...data
+        };
+        storage.invoices.set(data.invoiceId, {
+          ...storage.invoices.get(data.invoiceId),
+          lineItems: [...(storage.invoices.get(data.invoiceId)?.lineItems || []), lineItem]
+        });
+        return lineItem;
+      }),
+      createMany: jest.fn(async ({ data }) => {
+        const createdItems = data.map((item: any) => ({
+          id: `lineitem_${Date.now()}_${Math.random()}`,
+          ...item
+        }));
+        const invoiceId = data[0]?.invoiceId;
+        if (invoiceId) {
+          storage.invoices.set(invoiceId, {
+            ...storage.invoices.get(invoiceId),
+            lineItems: [...(storage.invoices.get(invoiceId)?.lineItems || []), ...createdItems]
+          });
+        }
+        return createdItems;
+      }),
+      findMany: jest.fn(async ({ where }) => {
+        const invoice = storage.invoices.get(where.invoiceId);
+        return invoice?.lineItems || [];
+      }),
+      findUnique: jest.fn(async ({ where }) => {
+        const invoice = storage.invoices.get(where.invoiceId);
+        return invoice?.lineItems?.find((li: any) => li.id === where.id) || null;
+      }),
+      update: jest.fn(async ({ where, data }) => {
+        const invoice = storage.invoices.get(where.invoiceId);
+        if (!invoice) throw new Error('Invoice not found');
+        const updatedLineItems = invoice.lineItems.map((li: any) =>
+          li.id === where.id ? { ...li, ...data } : li
+        );
+        storage.invoices.set(where.invoiceId, { ...invoice, lineItems: updatedLineItems });
+        return updatedLineItems.find((li: any) => li.id === where.id);
+      }),
+      delete: jest.fn(async ({ where }) => {
+        const invoice = storage.invoices.get(where.invoiceId);
+        if (!invoice) throw new Error('Invoice not found');
+        const filtered = invoice.lineItems.filter((li: any) => li.id !== where.id);
+        storage.invoices.set(where.invoiceId, { ...invoice, lineItems: filtered });
+        return { count: 1 };
+      }),
+      deleteMany: jest.fn(async ({ where }) => {
+        const invoice = storage.invoices.get(where.invoiceId);
+        if (!invoice) throw new Error('Invoice not found');
+        storage.invoices.set(where.invoiceId, { ...invoice, lineItems: [] });
+        return { count: invoice.lineItems.length };
+      }),
+      aggregate: jest.fn(async ({ where }) => {
+        const invoice = storage.invoices.get(where.invoiceId);
+        const total = invoice?.lineItems?.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0) || 0;
+        return { _sum: { total } };
       })
     },
     escrowRecord: {

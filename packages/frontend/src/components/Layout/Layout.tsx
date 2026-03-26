@@ -63,16 +63,24 @@ export const Layout = ({ children }: LayoutProps) => {
               <Button 
                 color="inherit" 
                 onClick={() => navigate('/escrow')}
-                sx={{ fontWeight: 500, opacity: 0.5 }}
-                disabled
+                sx={{ 
+                  fontWeight: 500,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
               >
                 Escrow
               </Button>
               <Button 
                 color="inherit" 
                 onClick={() => navigate('/invoices')}
-                sx={{ fontWeight: 500, opacity: 0.5 }}
-                disabled
+                sx={{ 
+                  fontWeight: 500,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
               >
                 Invoices
               </Button>

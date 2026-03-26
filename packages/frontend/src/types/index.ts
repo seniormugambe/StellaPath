@@ -60,11 +60,19 @@ export interface EscrowContract {
 // Invoice types
 export type InvoiceStatus = 'draft' | 'sent' | 'approved' | 'executed' | 'rejected' | 'expired'
 
+export interface InvoiceLineItem {
+  id?: string
+  description: string
+  quantity: number
+  unitPrice: number
+  total: number
+}
+
 export interface Invoice {
   id: string
   creator: string
   clientEmail: string
-  amount: number
+  totalAmount: number
   description: string
   status: InvoiceStatus
   createdAt: Date
@@ -73,6 +81,7 @@ export interface Invoice {
   executedAt?: Date
   txHash?: string
   approvalToken: string
+  lineItems: InvoiceLineItem[]
 }
 
 // API Response types

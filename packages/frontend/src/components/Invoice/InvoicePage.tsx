@@ -59,9 +59,13 @@ export const InvoicePage = () => {
     try {
       const response = await apiClient.post<{ invoice: InvoiceListItem }>('/invoices', {
         clientEmail: formData.clientEmail,
-        amount: formData.amount,
         description: formData.description,
         dueDate: new Date(formData.dueDate).toISOString(),
+        lineItems: formData.lineItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice
+        }))
       })
 
       if (response.success && response.data?.invoice) {
@@ -69,7 +73,7 @@ export const InvoicePage = () => {
         dispatch(addInvoice({
           id: invoice.id,
           clientEmail: invoice.clientEmail,
-          amount: invoice.amount,
+          amount: invoice.totalAmount,
           description: invoice.description,
           status: invoice.status,
           dueDate: invoice.dueDate,

@@ -1,6 +1,7 @@
 export { UserRepository } from './UserRepository';
 export { TransactionRepository } from './TransactionRepository';
 export { InvoiceRepository } from './InvoiceRepository';
+export { InvoiceLineItemRepository } from './InvoiceLineItemRepository';
 export { EscrowRepository } from './EscrowRepository';
 export { NotificationRepository } from './NotificationRepository';
 
@@ -9,6 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import { UserRepository } from './UserRepository';
 import { TransactionRepository } from './TransactionRepository';
 import { InvoiceRepository } from './InvoiceRepository';
+import { InvoiceLineItemRepository } from './InvoiceLineItemRepository';
 import { EscrowRepository } from './EscrowRepository';
 import { NotificationRepository } from './NotificationRepository';
 
@@ -16,6 +18,7 @@ export interface Repositories {
   user: UserRepository;
   transaction: TransactionRepository;
   invoice: InvoiceRepository;
+  invoiceLineItem: InvoiceLineItemRepository;
   escrow: EscrowRepository;
   notification: NotificationRepository;
 }
@@ -25,6 +28,7 @@ export function createRepositories(prisma: PrismaClient): Repositories {
     user: new UserRepository(prisma),
     transaction: new TransactionRepository(prisma),
     invoice: new InvoiceRepository(prisma),
+    invoiceLineItem: new InvoiceLineItemRepository(prisma),
     escrow: new EscrowRepository(prisma),
     notification: new NotificationRepository(prisma)
   };

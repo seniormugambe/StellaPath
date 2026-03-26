@@ -41,6 +41,34 @@ export const useWallet = (): UseWalletReturn => {
   const [availableWallets, setAvailableWallets] = useState<WalletType[]>([])
 
   /**
+   * Disconnect from wallet
+   * Validates: Requirement 6.4 - Clear session data on disconnect
+   */
+  const disconnect = useCallback(async () => {
+    setError(null)
+
+    try {
+      // Disconnect from wallet if connected
+      if (walletState.walletType) {
+        await WalletManager.disconnect(walletState.walletType)
+      }
+
+      // Clear auth token
+      localStorage.removeItem('authToken')
+
+      // Clear Redux state
+      dispatch(disconnectWallet())
+
+      console.log('✅ Successfully disconnected from wallet')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to disconnect wallet'
+      setError(errorMessage)
+      console.error('Wallet disconnection error:', err)
+      // Don't throw error on disconnect failure
+    }
+  }, [dispatch, walletState.walletType])
+
+  /**
    * Load available wallets on mount and validate persisted connection
    */
   useEffect(() => {
@@ -75,9 +103,20 @@ export const useWallet = (): UseWalletReturn => {
       }
     }
 
+    const handleAuthLogout = () => {
+      console.warn('Auth token expired/invalid, forcing wallet disconnect')
+      // When auth token is invalid/expired, clear wallet connection state so the user can reconnect.
+      disconnect()
+    }
+
     loadAvailableWallets()
     validatePersistedConnection()
-  }, [dispatch, walletState.connected, walletState.walletType])
+
+    window.addEventListener('auth:logout', handleAuthLogout)
+    return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout)
+    }
+  }, [dispatch, walletState.connected, walletState.walletType, disconnect])
 
   /**
    * Connect to wallet
@@ -186,34 +225,6 @@ export const useWallet = (): UseWalletReturn => {
       console.warn('⚠️ Continuing without backend authentication - API calls may fail')
     }
   }
-
-  /**
-   * Disconnect from wallet
-   * Validates: Requirement 6.4 - Clear session data on disconnect
-   */
-  const disconnect = useCallback(async () => {
-    setError(null)
-
-    try {
-      // Disconnect from wallet if connected
-      if (walletState.walletType) {
-        await WalletManager.disconnect(walletState.walletType)
-      }
-
-      // Clear auth token
-      localStorage.removeItem('authToken')
-
-      // Clear Redux state
-      dispatch(disconnectWallet())
-
-      console.log('✅ Successfully disconnected from wallet')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to disconnect wallet'
-      setError(errorMessage)
-      console.error('Wallet disconnection error:', err)
-      // Don't throw error on disconnect failure
-    }
-  }, [dispatch, walletState.walletType])
 
   /**
    * Sign a transaction

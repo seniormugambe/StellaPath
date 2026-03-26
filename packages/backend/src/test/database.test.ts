@@ -34,6 +34,16 @@ const mockPrisma = {
     groupBy: jest.fn(),
     aggregate: jest.fn()
   },
+  invoiceLineItem: {
+    create: jest.fn().mockResolvedValue({}),
+    createMany: jest.fn().mockResolvedValue({}),
+    findMany: jest.fn().mockResolvedValue([]),
+    findUnique: jest.fn().mockResolvedValue(null),
+    update: jest.fn().mockResolvedValue({}),
+    delete: jest.fn().mockResolvedValue({}),
+    deleteMany: jest.fn().mockResolvedValue({}),
+    aggregate: jest.fn().mockResolvedValue({ _sum: { total: 0 } })
+  },
   escrowRecord: {
     create: jest.fn(),
     findUnique: jest.fn(),
@@ -214,7 +224,11 @@ describe('Database Schema and ORM', () => {
         dueDate: new Date()
       });
 
-      expect(result).toEqual(mockInvoice);
+      expect(result).toMatchObject({
+        ...mockInvoice,
+        totalAmount: 250.75
+      });
+      expect(Array.isArray(result.lineItems)).toBe(true);
       expect(mockPrisma.invoiceRecord.create).toHaveBeenCalled();
     });
 

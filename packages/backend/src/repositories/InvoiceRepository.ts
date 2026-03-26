@@ -9,16 +9,30 @@ import {
   InvoiceStatus,
   PublicInvoice
 } from '../types/database';
+import { InvoiceLineItemRepository } from './InvoiceLineItemRepository';
 
 export class InvoiceRepository {
-  constructor(private prisma: PrismaClient) {}
+  private lineItemRepository: InvoiceLineItemRepository;
+
+  constructor(private prisma: PrismaClient) {
+    this.lineItemRepository = new InvoiceLineItemRepository(prisma);
+  }
 
   async create(data: CreateInvoiceRequest): Promise<InvoiceRecord> {
+    // Determine line items and total amount
+    const lineItems = data.lineItems && data.lineItems.length > 0
+      ? data.lineItems
+      : data.amount !== undefined
+        ? [{ description: data.description, quantity: 1, unitPrice: data.amount }]
+        : [{ description: data.description, quantity: 1, unitPrice: 0 }];
+
+    const totalAmount = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+
     const invoice = await this.prisma.invoiceRecord.create({
       data: {
         creatorId: data.creatorId,
         clientEmail: data.clientEmail,
-        amount: data.amount,
+        totalAmount,
         description: data.description,
         dueDate: data.dueDate,
         metadata: data.metadata || {}
@@ -35,7 +49,25 @@ export class InvoiceRepository {
       }
     });
 
-    return this.mapToInvoice(invoice);
+    // Create line items in the invoice_line_items table
+    let createdLineItems = [];
+    if (data.lineItems && data.lineItems.length > 0) {
+      createdLineItems = await this.lineItemRepository.createMany(invoice.id, data.lineItems);
+    } else {
+      const defaultItem = {
+        description: lineItems[0]?.description || data.description,
+        quantity: lineItems[0]?.quantity || 1,
+        unitPrice: lineItems[0]?.unitPrice || 0
+      };
+      const createdItem = await this.lineItemRepository.create(invoice.id, defaultItem);
+      createdLineItems = [createdItem];
+    }
+
+    return this.mapToInvoice({
+      ...invoice,
+      totalAmount,
+      lineItems: createdLineItems
+    });
   }
 
   async findById(id: string): Promise<InvoiceRecord | null> {
@@ -49,6 +81,9 @@ export class InvoiceRepository {
             displayName: true,
             email: true
           }
+        },
+        lineItems: {
+          orderBy: { sortOrder: 'asc' }
         }
       }
     });
@@ -67,6 +102,9 @@ export class InvoiceRepository {
             displayName: true,
             email: true
           }
+        },
+        lineItems: {
+          orderBy: { sortOrder: 'asc' }
         }
       }
     });
@@ -91,9 +129,9 @@ export class InvoiceRepository {
         if (filters.endDate) where.createdAt.lte = filters.endDate;
       }
       if (filters.minAmount || filters.maxAmount) {
-        where.amount = {};
-        if (filters.minAmount) where.amount.gte = filters.minAmount;
-        if (filters.maxAmount) where.amount.lte = filters.maxAmount;
+        where.totalAmount = {};
+        if (filters.minAmount) where.totalAmount.gte = filters.minAmount;
+        if (filters.maxAmount) where.totalAmount.lte = filters.maxAmount;
       }
     }
 
@@ -124,6 +162,9 @@ export class InvoiceRepository {
               displayName: true,
               email: true
             }
+          },
+          lineItems: {
+            orderBy: { sortOrder: 'asc' }
           }
         }
       }),
@@ -177,6 +218,9 @@ export class InvoiceRepository {
             displayName: true,
             email: true
           }
+        },
+        lineItems: {
+          orderBy: { sortOrder: 'asc' }
         }
       }
     });
@@ -199,6 +243,9 @@ export class InvoiceRepository {
             displayName: true,
             email: true
           }
+        },
+        lineItems: {
+          orderBy: { sortOrder: 'asc' }
         }
       }
     });
@@ -237,7 +284,7 @@ export class InvoiceRepository {
 
     return {
       id: invoice.id,
-      amount: Number(invoice.amount),
+      amount: Number(invoice.totalAmount),
       description: invoice.description,
       creatorName: invoice.creator.displayName || 'Anonymous',
       dueDate: invoice.dueDate,
@@ -263,18 +310,18 @@ export class InvoiceRepository {
       }),
       this.prisma.invoiceRecord.aggregate({
         where,
-        _sum: { amount: true }
+        _sum: { totalAmount: true }
       })
     ]);
 
     const [paidAmountResult, pendingAmountResult] = await Promise.all([
       this.prisma.invoiceRecord.aggregate({
         where: { ...where, status: InvoiceStatus.EXECUTED },
-        _sum: { amount: true }
+        _sum: { totalAmount: true }
       }),
       this.prisma.invoiceRecord.aggregate({
         where: { ...where, status: { in: [InvoiceStatus.SENT, InvoiceStatus.APPROVED] } },
-        _sum: { amount: true }
+        _sum: { totalAmount: true }
       })
     ]);
 
@@ -286,9 +333,9 @@ export class InvoiceRepository {
     return {
       total,
       byStatus: statusStats,
-      totalAmount: Number(amounts._sum.amount || 0),
-      paidAmount: Number(paidAmountResult._sum.amount || 0),
-      pendingAmount: Number(pendingAmountResult._sum.amount || 0)
+      totalAmount: Number(amounts._sum.totalAmount || 0),
+      paidAmount: Number(paidAmountResult._sum.totalAmount || 0),
+      pendingAmount: Number(pendingAmountResult._sum.totalAmount || 0)
     };
   }
 
@@ -298,13 +345,30 @@ export class InvoiceRepository {
     });
   }
 
+  async recalculateTotal(invoiceId: string): Promise<number> {
+    const total = await this.lineItemRepository.calculateTotal(invoiceId);
+    
+    await this.prisma.invoiceRecord.update({
+      where: { id: invoiceId },
+      data: { totalAmount: total }
+    });
+
+    return total;
+  }
+
+  async getLineItemRepository(): Promise<InvoiceLineItemRepository> {
+    return this.lineItemRepository;
+  }
+
   private mapToInvoice(invoice: any): InvoiceRecord {
     return {
       ...invoice,
-      amount: Number(invoice.amount),
+      totalAmount: Number(invoice.totalAmount),
+      amount: Number(invoice.totalAmount),
       metadata: typeof invoice.metadata === 'string' 
         ? JSON.parse(invoice.metadata) 
-        : invoice.metadata
+        : invoice.metadata,
+      lineItems: invoice.lineItems || []
     };
   }
 }

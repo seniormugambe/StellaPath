@@ -278,7 +278,7 @@ export class InvoiceExpirationService {
         {
           invoiceId: invoice.id,
           clientEmail: invoice.clientEmail,
-          amount: String(invoice.amount),
+          amount: String(invoice.totalAmount ?? invoice.amount),
           currency: 'XLM',
           reason: 'Invoice expired without approval before the due date',
         },

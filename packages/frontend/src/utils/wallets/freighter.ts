@@ -81,7 +81,8 @@ export class FreighterWallet {
       // Use signBlob to sign the message. Different versions of Freighter
       // return different shapes, so normalise everything to a base64 string.
       console.log('📝 Calling Freighter signBlob...')
-      const rawSignature = await signBlob(message)
+      // The Freighter API can return a few different types, so keep this loose.
+      const rawSignature: any = await signBlob(message)
       console.log('✍️ Freighter signBlob returned:', rawSignature)
 
       if (!rawSignature) {
@@ -94,7 +95,8 @@ export class FreighterWallet {
         normalizedSignature = rawSignature
       } else if (rawSignature instanceof Uint8Array) {
         // Browser-safe conversion of bytes to base64
-        const binary = String.fromCharCode(...rawSignature)
+        const uint = rawSignature as Uint8Array
+        const binary = String.fromCharCode(...Array.from(uint))
         normalizedSignature = btoa(binary)
       } else if (typeof rawSignature === 'object') {
         // Handle Node Buffer JSON shape: { type: 'Buffer', data: number[] }
