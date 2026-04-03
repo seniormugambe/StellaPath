@@ -16,6 +16,7 @@ import {
   TransactionFilters,
   PaginationOptions 
 } from '../types/database';
+import { attachAnchorMetadata } from '../utils/anchorMetadata';
 
 const logger = createLogger();
 const transactionRepository = new TransactionRepository(prisma);
@@ -50,7 +51,7 @@ export const createTransaction = asyncHandler(async (req: AuthRequest, res: Resp
     sender,
     recipient,
     fees: fees || 0,
-    metadata: metadata || {}
+    metadata: attachAnchorMetadata(metadata || {})
   });
 
   logger.info(`Transaction created: ${transaction.id} (${type})`);

@@ -5,6 +5,7 @@ import {
   TransactionType,
   PaginationOptions
 } from '../types/database';
+import { attachAnchorMetadata } from '../utils/anchorMetadata';
 import { logger } from '../utils/logger';
 
 export interface P2PPaymentParams {
@@ -118,11 +119,11 @@ export class P2PHandler {
         sender: params.sender,
         recipient: params.recipient,
         fees: Number(fee),
-        metadata: {
+        metadata: attachAnchorMetadata({
           ...(params.memo ? { memo: params.memo } : {}),
           timestamp: new Date().toISOString(),
           paymentType: 'p2p'
-        }
+        })
       });
 
       logger.info('P2P payment processed', { txHash });

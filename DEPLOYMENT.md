@@ -7,12 +7,13 @@ This guide covers local development setup, production deployment, and operationa
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Local Development Setup](#local-development-setup)
-3. [Production Deployment](#production-deployment)
-4. [Environment Variable Reference](#environment-variable-reference)
-5. [Database Migrations](#database-migrations)
-6. [Monitoring & Logging](#monitoring--logging)
-7. [Troubleshooting](#troubleshooting)
+2. [Pre-Deployment Setup](#pre-deployment-setup)
+3. [Local Development Setup](#local-development-setup)
+4. [Production Deployment](#production-deployment)
+5. [Environment Variable Reference](#environment-variable-reference)
+6. [Database Migrations](#database-migrations)
+7. [Monitoring & Logging](#monitoring--logging)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -27,6 +28,151 @@ This guide covers local development setup, production deployment, and operationa
 | **Rust** | ≥ 1.74 (optional) | Soroban smart contract compilation |
 | **Soroban CLI** | ≥ 20 (optional) | Smart contract deployment |
 | **Git** | ≥ 2.40 | Version control |
+
+---
+
+## Pre-Deployment Setup
+
+Complete these steps before deploying to production (local Docker or Render).
+
+### 1. Create production environment files
+
+**Backend production config:**
+```bash
+cp packages/backend/.env.production.example packages/backend/.env.production
+```
+
+Edit `packages/backend/.env.production` and set **all required values**:
+
+```env
+# Database (use Render PostgreSQL or external managed DB)
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+
+# Cache (use Render Redis or external managed Redis)
+REDIS_URL=redis://:password@host:6379
+
+# Security - generate strong random values
+JWT_SECRET=your-secure-random-secret-minimum-64-characters-change-this
+POSTGRES_PASSWORD=your-strong-postgres-password
+REDIS_PASSWORD=your-strong-redis-password
+
+# Server
+NODE_ENV=production
+PORT=3001
+CORS_ORIGIN=https://your-frontend-domain.com
+
+# Stellar Network
+STELLAR_NETWORK=testnet  # or mainnet
+STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
+SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+
+# Smart Contracts (populate after deployment)
+ESCROW_CONTRACT_ADDRESS=CABC...
+INVOICE_CONTRACT_ADDRESS=CABC...
+
+# Email (optional, for invoice/notification emails)
+SENDGRID_API_KEY=SG.your_key_here
+FROM_EMAIL=noreply@your-domain.com
+```
+
+**Frontend production config:**
+```bash
+cp packages/frontend/.env.production.example packages/frontend/.env.production
+```
+
+Edit `packages/frontend/.env.production`:
+
+```env
+VITE_API_BASE_URL=https://your-backend-domain.com
+```
+
+### 2. Verify Docker setup
+
+Ensure Docker and Docker Compose are installed and running:
+
+```bash
+docker --version      # Should be ≥ 24
+docker compose version # Should be ≥ 2.20
+```
+
+### 3. Test local Docker build
+
+Build and test locally before production:
+
+```bash
+# Build images
+docker compose -f docker-compose.prod.yml build
+
+# Start services (this uses the .env values from packages/backend/.env.production)
+docker compose -f docker-compose.prod.yml up -d
+
+# Verify services are healthy
+docker compose -f docker-compose.prod.yml ps
+# All services should show status "healthy"
+
+# Test backend
+curl http://localhost:3001/health
+
+# Test frontend
+curl http://localhost/
+
+# Stop for now
+docker compose -f docker-compose.prod.yml down
+```
+
+### 4. Prepare database
+
+Run migrations to ensure schema is current:
+
+```bash
+cd packages/backend
+
+# Check migration status
+npm run db:migrate -- --status
+
+# Apply any pending migrations (safe, doesn't modify existing data)
+npm run db:migrate:deploy
+```
+
+### 5. Get deployment credentials
+
+**For Docker Compose on a server:**
+- SSH access to server
+- Open ports 80 (HTTP), 443 (HTTPS)
+- Ensure `/var/log` writable for container logs
+
+**For Render:**
+- Render account with billing enabled
+- GitHub repository connected
+- Render PostgreSQL and Redis services created (get connection strings)
+
+### 6. Pre-deployment checklist
+
+✅ **Security**
+- [ ] `JWT_SECRET` is strong (64+ random chars)
+- [ ] `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are strong
+- [ ] `.env.production` is in `.gitignore` (never commit secrets)
+- [ ] Database backups configured (if applicable)
+
+✅ **Configuration**
+- [ ] `DATABASE_URL` points to production database
+- [ ] `REDIS_URL` configured (or disabled if not using jobs)
+- [ ] `CORS_ORIGIN` set to actual frontend domain
+- [ ] `STELLAR_NETWORK` is `testnet` (for testing) or `mainnet`
+
+✅ **Smart Contracts** (if using escrow/invoice)
+- [ ] Smart contract deployed to Stellar network
+- [ ] `ESCROW_CONTRACT_ADDRESS` and `INVOICE_CONTRACT_ADDRESS` set
+
+✅ **Infrastructure**
+- [ ] Render services created (Backend, Frontend, PostgreSQL), OR
+- [ ] Server prepared with Docker/Docker Compose
+- [ ] Firewall rules allow inbound traffic
+
+✅ **Database**
+- [ ] Test connection to production PostgreSQL
+- [ ] Migrations applied (`npm run db:migrate:deploy`)
+- [ ] Backup strategy in place
 
 ---
 
@@ -186,6 +332,113 @@ To also remove volumes (⚠️ destroys data):
 docker compose -f docker-compose.prod.yml down -v
 ```
 
+### Using Render (native services)
+
+Render simplifies deployment with native support for Node.js, managed PostgreSQL, and managed Redis.
+
+#### 1. Create Render services
+
+Create three services in Render dashboard:
+
+**A. PostgreSQL Database**
+- Type: PostgreSQL
+- Plan: Standard (or higher)
+- Keep auto-generated connection string (add to backend env vars as `DATABASE_URL`)
+
+**B. Redis Cache** (optional, if using background jobs)
+- Type: Redis
+- Plan: Standard (or higher)
+- Keep connection string for backend (add as `REDIS_URL`)
+
+**C. Backend Web Service**
+- Name: `stellar-backend`
+- Environment: Node
+- Region: Choose closest to users
+- Branch: `main`
+- Build Command: `npm install && npm run build --workspace=backend && npm run db:migrate:deploy --workspace=backend`
+- Start Command: `npm start --workspace=backend`
+- Port: `3001` (or set via `PORT` env var)
+
+**D. Frontend Web Service** (optional, separate from backend)
+- Name: `stellar-frontend`
+- Environment: Static Site (or Node)
+- Branch: `main`
+- Build Command: `npm install && npm run build --workspace=frontend`
+- Publish Directory: `packages/frontend/dist`
+- Or use Node with: `npm start --workspace=frontend` after build
+
+#### 2. Set environment variables
+
+In Render backend service settings, add environment variables:
+
+**Required:**
+```env
+DATABASE_URL=postgresql://user:password@hostname/dbname    # From Render PostgreSQL
+REDIS_URL=redis://:password@hostname:10000                  # From Render Redis (if using)
+JWT_SECRET=your-secure-random-secret-64-chars-minimum
+
+NODE_ENV=production
+PORT=3001
+
+# Stellar Network (testnet default, change to mainnet for production)
+STELLAR_NETWORK=testnet
+STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
+SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+```
+
+**Optional (if using backend features):**
+```env
+SENDGRID_API_KEY=your-sendgrid-key
+FROM_EMAIL=noreply@yourapp.com
+LOG_LEVEL=info
+CORS_ORIGIN=https://your-frontend-url.onrender.com
+```
+
+For frontend, add:
+```env
+VITE_API_BASE_URL=https://your-backend-url.onrender.com
+```
+
+#### 3. Connect to GitHub
+
+1. In Render, click **New** → **Web Service**
+2. Connect your GitHub repository
+3. Select branch (`main`)
+4. Fill in build/start commands as above
+5. Add environment variables
+6. Click **Create Web Service**
+
+Render auto-deploys on `git push` to main branch.
+
+#### 4. Verify deployment
+
+```bash
+# Test backend health
+curl https://your-backend-url.onrender.com/health
+
+# Should return:
+# {"status":"ok","timestamp":"...","version":"1.0.0","environment":"production"}
+
+# Test frontend
+# Visit https://your-frontend-url.onrender.com
+```
+
+#### 5. Database migrations
+
+Migrations run automatically via build command:
+```bash
+npm run db:migrate:deploy --workspace=backend
+```
+
+If manual migration needed:
+```bash
+# Via Render shell
+npm install --workspace=backend
+npx prisma migrate deploy --workspace=backend
+```
+
+---
+
 ### CI/CD Pipeline
 
 The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs on pushes and PRs to `main`:
@@ -228,6 +481,8 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
 | `STELLAR_HORIZON_URL` | `https://horizon-testnet.stellar.org` | Horizon API URL |
 | `STELLAR_PASSPHRASE` | Test SDF passphrase | Network passphrase |
 | `SOROBAN_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban RPC URL |
+| `STELLAR_ANCHOR_PROVIDER` | `stellar-ramp` | Stellar anchor/ramp provider identifier |
+| `STELLAR_ANCHOR_DEPOSIT_URL` | — | Optional anchor deposit URL for ramp flows |
 
 ### JWT
 
@@ -415,4 +670,21 @@ npx prisma migrate status
 
 # If stuck, reset (⚠️ development only)
 npm run db:migrate:reset
+```
+
+### Render-specific issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Build fails with `npm: not found` | Node runtime not selected | Ensure environment is `Node` (not Static Site) |
+| `DATABASE_URL` connection fails | PostgreSQL not ready or wrong URL | Check Render PostgreSQL service status; copy exact URL from dashboard |
+| Health check failing (500 status) | Backend not starting | Check `PORT` env var (default `3001`); verify `DATABASE_URL` is set |
+| Migrations not running | Build command incorrect | Use exact: `npm run db:migrate:deploy --workspace=backend` |
+| Frontend can't reach backend | CORS/URL issue | Set `CORS_ORIGIN=https://frontend-url.onrender.com` on backend; `VITE_API_BASE_URL=https://backend-url.onrender.com` on frontend |
+| Slow cold starts | Free plan limitations | Upgrade to paid plan or use cron jobs to prevent spinning down |
+| `JWT_SECRET` errors on deploy | Env var not set | Add `JWT_SECRET` to Render environment variables before deploy |
+
+**View Render logs:**
+```
+In Render dashboard → your service → Logs tab (real-time output)
 ```

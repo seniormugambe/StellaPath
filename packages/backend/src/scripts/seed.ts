@@ -98,7 +98,7 @@ async function main() {
     data: {
       creatorId: user1.id,
       clientEmail: 'client1@example.com',
-      amount: 250.75,
+      totalAmount: 250.75,
       description: 'Web development services - Q4 2024',
       status: InvoiceStatus.SENT,
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -115,7 +115,7 @@ async function main() {
     data: {
       creatorId: user2.id,
       clientEmail: 'client2@example.com',
-      amount: 1000.00,
+      totalAmount: 1000.00,
       description: 'Smart contract development and testing',
       status: InvoiceStatus.APPROVED,
       dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now

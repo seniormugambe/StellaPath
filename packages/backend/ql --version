@@ -1,0 +1,23 @@
+                                                             Table "public.invoice_records"
+    Column     |              Type              | Collation | Nullable |         Default          | Storage  | Compression | Stats target | Description 
+---------------+--------------------------------+-----------+----------+--------------------------+----------+-------------+--------------+-------------
+ id            | text                           |           | not null |                          | extended |             |              | 
+ creatorId     | text                           |           | not null |                          | extended |             |              | 
+ clientEmail   | text                           |           | not null |                          | extended |             |              | 
+ amount        | numeric(20,7)                  |           | not null |                          | main     |             |              | 
+ description   | text                           |           | not null |                          | extended |             |              | 
+ status        | "InvoiceStatus"                |           | not null | 'DRAFT'::"InvoiceStatus" | plain    |             |              | 
+ createdAt     | timestamp(3) without time zone |           | not null | CURRENT_TIMESTAMP        | plain    |             |              | 
+ dueDate       | timestamp(3) without time zone |           | not null |                          | plain    |             |              | 
+ approvedAt    | timestamp(3) without time zone |           |          |                          | plain    |             |              | 
+ executedAt    | timestamp(3) without time zone |           |          |                          | plain    |             |              | 
+ txHash        | text                           |           |          |                          | extended |             |              | 
+ approvalToken | text                           |           | not null |                          | extended |             |              | 
+ metadata      | jsonb                          |           | not null | '{}'::jsonb              | extended |             |              | 
+Indexes:
+    "invoice_records_pkey" PRIMARY KEY, btree (id)
+    "invoice_records_approvalToken_key" UNIQUE, btree ("approvalToken")
+Foreign-key constraints:
+    "invoice_records_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE
+Access method: heap
+

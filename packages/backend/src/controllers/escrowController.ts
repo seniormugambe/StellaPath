@@ -85,7 +85,10 @@ export const createEscrow = asyncHandler(async (req: AuthRequest, res: Response)
  * GET /api/escrows/:escrowId
  */
 export const getEscrow = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { escrowId } = req.params;
+  const escrowId = req.params.escrowId;
+  if (!escrowId) {
+    throw new AppError('Escrow ID is required', 400);
+  }
 
   const escrow = await escrowRepository.findById(escrowId);
   if (!escrow) {
@@ -120,7 +123,10 @@ export const getEscrow = asyncHandler(async (req: AuthRequest, res: Response) =>
  * GET /api/escrows/contract/:contractId
  */
 export const getEscrowByContractId = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { contractId } = req.params;
+  const contractId = req.params.contractId;
+  if (!contractId) {
+    throw new AppError('Contract ID is required', 400);
+  }
 
   const escrow = await escrowRepository.findByContractId(contractId);
   if (!escrow) {
@@ -221,7 +227,10 @@ export const getActiveEscrows = asyncHandler(async (req: AuthRequest, res: Respo
  * GET /api/escrows/:escrowId/conditions
  */
 export const checkEscrowConditions = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { escrowId } = req.params;
+  const escrowId = req.params.escrowId;
+  if (!escrowId) {
+    throw new AppError('Escrow ID is required', 400);
+  }
 
   const escrow = await escrowRepository.findById(escrowId);
   if (!escrow) {
@@ -252,7 +261,11 @@ export const checkEscrowConditions = asyncHandler(async (req: AuthRequest, res: 
  * POST /api/escrows/:escrowId/release
  */
 export const releaseEscrow = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { escrowId } = req.params;
+  const escrowId = req.params.escrowId;
+  if (!escrowId) {
+    throw new AppError('Escrow ID is required', 400);
+  }
+
   const { txHash } = req.body;
 
   if (!req.user) {
@@ -301,7 +314,11 @@ export const releaseEscrow = asyncHandler(async (req: AuthRequest, res: Response
  * POST /api/escrows/:escrowId/refund
  */
 export const refundEscrow = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { escrowId } = req.params;
+  const escrowId = req.params.escrowId;
+  if (!escrowId) {
+    throw new AppError('Escrow ID is required', 400);
+  }
+
   const { txHash } = req.body;
 
   if (!req.user) {
@@ -356,7 +373,11 @@ export const refundEscrow = asyncHandler(async (req: AuthRequest, res: Response)
  * PATCH /api/escrows/:escrowId/status
  */
 export const updateEscrowStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { escrowId } = req.params;
+  const escrowId = req.params.escrowId;
+  if (!escrowId) {
+    throw new AppError('Escrow ID is required', 400);
+  }
+
   const { status, txHash } = req.body;
 
   if (!req.user) {

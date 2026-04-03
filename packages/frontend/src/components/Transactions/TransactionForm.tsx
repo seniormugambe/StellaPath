@@ -160,19 +160,19 @@ export const TransactionForm = ({ onSubmit, loading = false }: TransactionFormPr
                   </Typography>
                 </Box>
               </MenuItem>
-              <MenuItem value="escrow" disabled>
+              <MenuItem value="escrow">
                 <Box>
                   <Typography variant="body1" fontWeight={500}>Escrow Transaction</Typography>
-                  <Typography variant="caption" color="warning.main">
-                    Coming soon
+                  <Typography variant="caption" color="text.secondary">
+                    Secure, conditional release payment
                   </Typography>
                 </Box>
               </MenuItem>
-              <MenuItem value="invoice" disabled>
+              <MenuItem value="invoice">
                 <Box>
                   <Typography variant="body1" fontWeight={500}>Invoice Payment</Typography>
-                  <Typography variant="caption" color="warning.main">
-                    Coming soon
+                  <Typography variant="caption" color="text.secondary">
+                    Payment triggered by invoice approval
                   </Typography>
                 </Box>
               </MenuItem>
@@ -211,6 +211,18 @@ export const TransactionForm = ({ onSubmit, loading = false }: TransactionFormPr
             }}
             sx={{ mb: 3 }}
           />
+
+          {formData.type === 'escrow' && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Escrow transactions are now enabled. If you choose Escrow, the backend executes conditional release paths when the transaction is marked complete.
+            </Alert>
+          )}
+
+          {formData.type === 'invoice' && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Invoice payments are now enabled. Choose an invoice transaction to link payment to invoice processing.
+            </Alert>
+          )}
 
           <TextField
             fullWidth

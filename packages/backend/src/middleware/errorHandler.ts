@@ -112,21 +112,22 @@ function buildErrorResponse(
   includeDebug?: boolean,
   stack?: string
 ) {
-  const response: Record<string, unknown> = {
+  const response: { success: boolean; error: Record<string, unknown> } = {
     success: false,
     error: {
       code,
       message,
       recovery: recoverySuggestions[code] || recoverySuggestions[ErrorCode.INTERNAL_ERROR],
+      statusCode,
     },
   };
 
   if (details) {
-    (response.error as Record<string, unknown>).details = details;
+    response.error.details = details;
   }
 
   if (includeDebug && stack) {
-    (response.error as Record<string, unknown>).stack = stack;
+    response.error.stack = stack;
   }
 
   return response;
@@ -141,7 +142,7 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = process.env['NODE_ENV'] === 'development';
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {

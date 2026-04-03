@@ -9,6 +9,7 @@ import {
   ClientInfo,
   PublicInvoice
 } from '../types/database';
+import { attachAnchorMetadata } from '../utils/anchorMetadata';
 import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -238,12 +239,12 @@ export class InvoiceManager {
         sender: 'client',
         recipient: invoice.creatorId,
         fees: 0,
-        metadata: {
+        metadata: attachAnchorMetadata({
           invoiceId: invoice.id,
           ...(invoice.clientEmail ? { clientEmail: invoice.clientEmail } : {}),
           description: invoice.description,
           timestamp: new Date().toISOString()
-        }
+        })
       });
 
       logger.info('Invoice executed', { invoiceId, txHash });

@@ -18,13 +18,13 @@ import {
 import { Refresh as RefreshIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-material'
 import { Transaction, TransactionStatus, TransactionType } from '../../types'
 import { TransactionFilters } from './TransactionFilters'
+import { useAppSelector } from '../../store/hooks'
 
 interface TransactionHistoryProps {
   transactions: Transaction[]
   loading?: boolean
   error?: string | null
   onRefresh?: () => void
-  onFilterChange?: (filters: any) => void
 }
 
 export const TransactionHistory = ({
@@ -32,13 +32,31 @@ export const TransactionHistory = ({
   loading = false,
   error = null,
   onRefresh,
-  onFilterChange,
 }: TransactionHistoryProps) => {
+  const filters = useAppSelector((state) => state.transactions.filters)
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(transactions)
 
   useEffect(() => {
-    setFilteredTransactions(transactions)
-  }, [transactions])
+    let filtered = [...transactions]
+
+    if (filters.type) {
+      filtered = filtered.filter((tx) => tx.type === filters.type)
+    }
+
+    if (filters.status) {
+      filtered = filtered.filter((tx) => tx.status === filters.status)
+    }
+
+    if (filters.dateFrom) {
+      filtered = filtered.filter((tx) => new Date(tx.timestamp) >= filters.dateFrom!)
+    }
+
+    if (filters.dateTo) {
+      filtered = filtered.filter((tx) => new Date(tx.timestamp) <= filters.dateTo!)
+    }
+
+    setFilteredTransactions(filtered)
+  }, [transactions, filters])
 
   const getStatusColor = (status: TransactionStatus): 'success' | 'warning' | 'error' | 'default' => {
     switch (status) {
@@ -85,29 +103,6 @@ export const TransactionHistory = ({
     window.open(explorerUrl, '_blank')
   }
 
-  const handleFilterChange = (filters: any) => {
-    let filtered = [...transactions]
-
-    if (filters.type) {
-      filtered = filtered.filter((tx) => tx.type === filters.type)
-    }
-
-    if (filters.status) {
-      filtered = filtered.filter((tx) => tx.status === filters.status)
-    }
-
-    if (filters.dateFrom) {
-      filtered = filtered.filter((tx) => new Date(tx.timestamp) >= new Date(filters.dateFrom))
-    }
-
-    if (filters.dateTo) {
-      filtered = filtered.filter((tx) => new Date(tx.timestamp) <= new Date(filters.dateTo))
-    }
-
-    setFilteredTransactions(filtered)
-    onFilterChange?.(filters)
-  }
-
   return (
     <Box>
       <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
@@ -138,7 +133,7 @@ export const TransactionHistory = ({
           )}
         </Box>
 
-        <TransactionFilters onFilterChange={handleFilterChange} />
+        <TransactionFilters />
       </Paper>
 
       {error && (

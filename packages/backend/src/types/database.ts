@@ -84,11 +84,22 @@ export interface TransactionRecord extends Omit<PrismaTransactionRecord, 'metada
   metadata: TransactionMetadata;
 }
 
+export interface AnchorMetadata {
+  provider: string;
+  network: string;
+  timestamp: string;
+  depositUrl?: string;
+  anchorAccount?: string;
+  anchorMemo?: string;
+  [key: string]: any;
+}
+
 export interface TransactionMetadata {
   memo?: string;
   timestamp?: string;
   contractAddress?: string;
   gasUsed?: number;
+  anchor?: AnchorMetadata;
   [key: string]: any;
 }
 

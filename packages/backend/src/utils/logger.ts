@@ -5,8 +5,8 @@
 import winston from 'winston';
 import path from 'path';
 
-const logLevel = process.env.LOG_LEVEL || 'info';
-const logFile = process.env.LOG_FILE || 'logs/app.log';
+const logLevel = process.env['LOG_LEVEL'] || 'info';
+const logFile = process.env['LOG_FILE'] || 'logs/app.log';
 
 // Ensure logs directory exists
 const logDir = path.dirname(logFile);

@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Box, Typography, Card, CardContent, Grid, Button } from '@mui/material'
 import { AccountBalanceWallet, SwapHoriz, Lock, Receipt } from '@mui/icons-material'
 import { Layout } from './components/Layout'
+import { Dashboard } from './components/Dashboard'
 import { TransactionsPage } from './components/Transactions'
 import { EscrowPage } from './components/Escrow'
 import { InvoicePage } from './components/Invoice'
@@ -225,11 +226,7 @@ function App() {
           </Box>
         } />
         
-        <Route path="/dashboard" element={
-          <Typography variant="h4" align="center">
-            Dashboard - Coming Soon
-          </Typography>
-        } />
+        <Route path="/dashboard" element={<Dashboard />} />
         
         <Route path="/transactions" element={<TransactionsPage />} />
         

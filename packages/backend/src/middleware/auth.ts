@@ -30,7 +30,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     return;
   }
 
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = process.env['JWT_SECRET'];
   if (!jwtSecret) {
     logger.error('JWT_SECRET not configured');
     res.status(500).json({ error: 'Server configuration error' });
@@ -71,24 +71,24 @@ export const verifyWalletSignature = (
  * Generate JWT token for authenticated user
  */
 export const generateToken = (userId: string, walletAddress: string): string => {
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = process.env['JWT_SECRET'];
   if (!jwtSecret) {
     throw new Error('JWT_SECRET not configured');
   }
 
-  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  const expiresIn = process.env['JWT_EXPIRES_IN'] || '7d';
   
   return jwt.sign(
     { id: userId, walletAddress },
-    jwtSecret,
-    { expiresIn }
+    jwtSecret as jwt.Secret,
+    { expiresIn } as jwt.SignOptions
   );
 };
 
 /**
  * Optional authentication - attaches user if token is valid but doesn't require it
  */
-export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -97,7 +97,7 @@ export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction
     return;
   }
 
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = process.env['JWT_SECRET'];
   if (!jwtSecret) {
     next();
     return;

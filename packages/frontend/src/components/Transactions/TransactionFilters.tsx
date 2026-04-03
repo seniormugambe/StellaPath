@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   FormControl,
@@ -10,9 +10,11 @@ import {
   Grid,
 } from '@mui/material'
 import { TransactionType, TransactionStatus } from '../../types'
+import { useAppSelector, useAppDispatch } from '../../store/hooks'
+import { setFilters, clearFilters } from '../../store/slices/transactionsSlice'
 
 interface TransactionFiltersProps {
-  onFilterChange: (filters: FilterValues) => void
+  onFilterChange?: (filters: FilterValues) => void
 }
 
 export interface FilterValues {
@@ -23,20 +25,46 @@ export interface FilterValues {
 }
 
 export const TransactionFilters = ({ onFilterChange }: TransactionFiltersProps) => {
-  const [filters, setFilters] = useState<FilterValues>({})
+  const dispatch = useAppDispatch()
+  const reduxFilters = useAppSelector((state) => state.transactions.filters)
+
+  const [localFilters, setLocalFilters] = useState<FilterValues>({
+    type: reduxFilters.type,
+    status: reduxFilters.status,
+    dateFrom: reduxFilters.dateFrom ? reduxFilters.dateFrom.toISOString().split('T')[0] : '',
+    dateTo: reduxFilters.dateTo ? reduxFilters.dateTo.toISOString().split('T')[0] : '',
+  })
+
+  useEffect(() => {
+    setLocalFilters({
+      type: reduxFilters.type,
+      status: reduxFilters.status,
+      dateFrom: reduxFilters.dateFrom ? reduxFilters.dateFrom.toISOString().split('T')[0] : '',
+      dateTo: reduxFilters.dateTo ? reduxFilters.dateTo.toISOString().split('T')[0] : '',
+    })
+  }, [reduxFilters])
 
   const handleFilterChange = (field: keyof FilterValues, value: any) => {
-    const newFilters = { ...filters, [field]: value || undefined }
-    setFilters(newFilters)
-    onFilterChange(newFilters)
+    const newLocalFilters = { ...localFilters, [field]: value || undefined }
+    setLocalFilters(newLocalFilters)
+
+    // Convert to Redux format
+    const reduxFilters = {
+      ...newLocalFilters,
+      dateFrom: newLocalFilters.dateFrom ? new Date(newLocalFilters.dateFrom) : undefined,
+      dateTo: newLocalFilters.dateTo ? new Date(newLocalFilters.dateTo) : undefined,
+    }
+
+    dispatch(setFilters(reduxFilters))
   }
 
   const handleClearFilters = () => {
-    setFilters({})
-    onFilterChange({})
+    setLocalFilters({})
+    dispatch(clearFilters())
+    onFilterChange?.({})
   }
 
-  const hasActiveFilters = Object.values(filters).some((value) => value !== undefined)
+  const hasActiveFilters = Object.values(localFilters).some((value) => value !== undefined && value !== '')
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -45,7 +73,7 @@ export const TransactionFilters = ({ onFilterChange }: TransactionFiltersProps) 
           <FormControl fullWidth size="small">
             <InputLabel>Type</InputLabel>
             <Select
-              value={filters.type || ''}
+              value={localFilters.type || ''}
               label="Type"
               onChange={(e) => handleFilterChange('type', e.target.value as TransactionType)}
             >
@@ -62,7 +90,7 @@ export const TransactionFilters = ({ onFilterChange }: TransactionFiltersProps) 
           <FormControl fullWidth size="small">
             <InputLabel>Status</InputLabel>
             <Select
-              value={filters.status || ''}
+              value={localFilters.status || ''}
               label="Status"
               onChange={(e) => handleFilterChange('status', e.target.value as TransactionStatus)}
             >
@@ -81,7 +109,7 @@ export const TransactionFilters = ({ onFilterChange }: TransactionFiltersProps) 
             size="small"
             label="From Date"
             type="date"
-            value={filters.dateFrom || ''}
+            value={localFilters.dateFrom || ''}
             onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
@@ -93,7 +121,7 @@ export const TransactionFilters = ({ onFilterChange }: TransactionFiltersProps) 
             size="small"
             label="To Date"
             type="date"
-            value={filters.dateTo || ''}
+            value={localFilters.dateTo || ''}
             onChange={(e) => handleFilterChange('dateTo', e.target.value)}
             InputLabelProps={{ shrink: true }}
           />

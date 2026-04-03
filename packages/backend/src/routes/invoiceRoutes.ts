@@ -20,7 +20,7 @@ import {
   deleteLineItem,
   reorderLineItems
 } from '../controllers/invoiceController';
-import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { validateBody, validateParams } from '../middleware/validation';
 import {
   createInvoiceSchema,

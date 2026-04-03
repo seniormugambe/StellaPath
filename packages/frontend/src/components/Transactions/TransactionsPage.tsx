@@ -7,7 +7,6 @@ import {
   updateTransaction,
   setLoading,
   setError,
-  setFilters,
 } from '../../store/slices/transactionsSlice'
 import { TransactionForm, TransactionFormData } from './TransactionForm'
 import { TransactionHistory } from './TransactionHistory'
@@ -137,10 +136,6 @@ export const TransactionsPage = () => {
     fetchTransactions()
   }
 
-  const handleFilterChange = (newFilters: any) => {
-    dispatch(setFilters(newFilters))
-  }
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue)
   }
@@ -194,7 +189,6 @@ export const TransactionsPage = () => {
           loading={loading}
           error={error}
           onRefresh={handleRefresh}
-          onFilterChange={handleFilterChange}
         />
       </TabPanel>
 

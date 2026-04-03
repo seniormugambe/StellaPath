@@ -7,10 +7,10 @@ declare global {
 
 // Create a singleton Prisma client instance
 export const prisma = globalThis.__prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log: process.env['NODE_ENV'] === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env['NODE_ENV'] !== 'production') {
   globalThis.__prisma = prisma;
 }
 
@@ -49,7 +49,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 
 // Transaction helper for atomic operations
 export async function withTransaction<T>(
-  callback: (tx: PrismaClient) => Promise<T>
+  callback: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => Promise<T>
 ): Promise<T> {
   return await prisma.$transaction(callback);
 }

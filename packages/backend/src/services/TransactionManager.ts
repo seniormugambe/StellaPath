@@ -9,6 +9,7 @@ import {
   PaginationOptions,
   PaginatedResponse
 } from '../types/database';
+import { attachAnchorMetadata } from '../utils/anchorMetadata';
 import { logger } from '../utils/logger';
 
 export interface TransactionResult {
@@ -98,10 +99,10 @@ export class TransactionManager {
         sender: params.sender,
         recipient: params.recipient,
         fees: Number(fee),
-        metadata: { 
+        metadata: attachAnchorMetadata({ 
           ...(params.memo ? { memo: params.memo } : {}),
-          timestamp: new Date().toISOString() 
-        }
+          timestamp: new Date().toISOString()
+        })
       });
 
       logger.info('Basic transaction created', { txHash });

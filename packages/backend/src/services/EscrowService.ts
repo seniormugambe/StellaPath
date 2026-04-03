@@ -8,6 +8,7 @@ import {
   ConditionStatus,
   TransactionType
 } from '../types/database';
+import { attachAnchorMetadata } from '../utils/anchorMetadata';
 import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import type { ConditionMonitorService } from './ConditionMonitorService';
@@ -212,11 +213,11 @@ export class EscrowService {
         sender: escrow.creatorId,
         recipient: escrow.recipientId || 'unknown',
         fees: 0,
-        metadata: {
+        metadata: attachAnchorMetadata({
           escrowId: escrow.id,
           action: 'release',
           timestamp: new Date().toISOString()
-        }
+        })
       });
 
       logger.info('Escrow released', { escrowId, txHash });
@@ -263,11 +264,11 @@ export class EscrowService {
         sender: escrow.recipientId || 'unknown',
         recipient: escrow.creatorId,
         fees: 0,
-        metadata: {
+        metadata: attachAnchorMetadata({
           escrowId: escrow.id,
           action: 'refund',
           timestamp: new Date().toISOString()
-        }
+        })
       });
 
       logger.info('Escrow refunded', { escrowId, txHash });
