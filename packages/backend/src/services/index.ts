@@ -3,6 +3,7 @@ export { EscrowService, EscrowServiceConfig, EscrowResult, EscrowParams, EscrowD
 export { P2PHandler, P2PHandlerConfig, P2PPaymentResult, P2PPaymentParams, RecipientValidation, FeeEstimate } from './P2PHandler';
 export { InvoiceManager, InvoiceManagerConfig, InvoiceResult, InvoiceParams, InvoiceDelivery, TokenValidation } from './InvoiceManager';
 export { NotificationService, NotificationServiceConfig, NotificationResult, SystemAlert } from './NotificationService';
+export { X402Service, X402ServiceConfig, X402PaymentResult, X402PaymentAuthorization, X402PaymentRequest, X402ResourceConfig, X402SessionConfig } from './X402Service';
 export {
   ConditionMonitorService,
   ConditionMonitorConfig,

@@ -25,6 +25,7 @@ import {
 } from '../../store/slices/p2pSlice'
 import { apiClient } from '../../utils/api'
 import type { FeeEstimate } from '../../store/slices/p2pSlice'
+import { MultiWalletAmountInput, type AmountInputSelection } from '../Payment'
 
 export interface P2PFormData {
   recipient: string
@@ -39,6 +40,8 @@ interface P2PFormProps {
 
 export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
   const dispatch = useAppDispatch()
+  const { accountId } = useAppSelector((state) => state.wallet)
+  const [paymentSelection, setPaymentSelection] = useState<AmountInputSelection>(null)
   const { feeEstimate, feeLoading, recipientValid, recipientChecking } = useAppSelector(
     (state) => state.p2p
   )
@@ -142,6 +145,7 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
     try {
       await onSubmit(formData)
       setFormData({ recipient: '', amount: 0, memo: '' })
+      setPaymentMethod('wallet')
       dispatch(setFeeEstimate(null))
       dispatch(setRecipientValid(null))
     } catch (err) {
@@ -234,25 +238,20 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
             />
           </Box>
 
-          <TextField
-            fullWidth
+          <MultiWalletAmountInput
+            value={formData.amount}
+            onChange={(value) => handleChange('amount', value)}
+            onSelectionChange={setPaymentSelection}
+            selection={paymentSelection}
             label="Amount"
-            type="number"
             placeholder="0.00"
-            value={formData.amount || ''}
-            onChange={(e) => handleChange('amount', parseFloat(e.target.value) || 0)}
-            error={!!validationErrors.amount}
-            helperText={validationErrors.amount || 'Minimum: 0.0000001 XLM'}
+            asset="XLM"
             disabled={loading}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <strong>XLM</strong>
-                </InputAdornment>
-              ),
-              inputProps: { min: 0, step: 0.0000001 },
-            }}
-            sx={{ mb: 3 }}
+            error={validationErrors.amount}
+            helperText={validationErrors.amount || 'Minimum: 0.0000001 XLM'}
+            minAmount={0}
+            step={0.0000001}
+            showRampOption={true}
           />
 
           {/* Fee estimation display */}
@@ -314,7 +313,12 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
             variant="contained"
             fullWidth
             size="large"
-            disabled={loading || !formData.recipient || formData.amount <= 0}
+            disabled={
+              loading ||
+              !formData.recipient ||
+              formData.amount <= 0 ||
+              paymentMethod === 'stellar_ramp'
+            }
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             sx={{
               py: 1.5,

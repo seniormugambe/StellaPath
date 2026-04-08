@@ -10,12 +10,12 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  InputAdornment,
   Paper,
   Divider,
 } from '@mui/material'
 import { Send as SendIcon } from '@mui/icons-material'
 import { TransactionType } from '../../types'
+import { MultiWalletAmountInput, type AmountInputSelection } from '../Payment'
 
 interface TransactionFormProps {
   onSubmit: (data: TransactionFormData) => Promise<void>
@@ -27,6 +27,7 @@ export interface TransactionFormData {
   recipient: string
   amount: number
   memo?: string
+  paymentSelection?: AmountInputSelection
 }
 
 export const TransactionForm = ({ onSubmit, loading = false }: TransactionFormProps) => {
@@ -90,6 +91,10 @@ export const TransactionForm = ({ onSubmit, loading = false }: TransactionFormPr
         return newErrors
       })
     }
+  }
+
+  const handlePaymentSelectionChange = (selection: AmountInputSelection) => {
+    setFormData((prev) => ({ ...prev, paymentSelection: selection }))
   }
 
   return (
@@ -195,21 +200,20 @@ export const TransactionForm = ({ onSubmit, loading = false }: TransactionFormPr
             }}
           />
 
-          <TextField
-            fullWidth
+          <MultiWalletAmountInput
+            value={formData.amount}
+            onChange={(value) => handleChange('amount', value)}
+            onSelectionChange={handlePaymentSelectionChange}
+            selection={formData.paymentSelection || null}
             label="Amount"
-            type="number"
             placeholder="0.00"
-            value={formData.amount || ''}
-            onChange={(e) => handleChange('amount', parseFloat(e.target.value) || 0)}
-            error={!!validationErrors.amount}
-            helperText={validationErrors.amount || 'Minimum: 0.0000001 XLM (network fee applies)'}
+            asset="XLM"
             disabled={loading}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><strong>XLM</strong></InputAdornment>,
-              inputProps: { min: 0, step: 0.0000001 },
-            }}
-            sx={{ mb: 3 }}
+            error={validationErrors.amount}
+            helperText={validationErrors.amount || 'Minimum: 0.0000001 XLM (network fee applies)'}
+            minAmount={0}
+            step={0.0000001}
+            showRampOption={true}
           />
 
           {formData.type === 'escrow' && (
@@ -249,7 +253,12 @@ export const TransactionForm = ({ onSubmit, loading = false }: TransactionFormPr
             variant="contained"
             fullWidth
             size="large"
-            disabled={loading || !formData.recipient || formData.amount <= 0}
+            disabled={
+              loading ||
+              !formData.recipient ||
+              formData.amount <= 0 ||
+              formData.paymentSelection?.type === 'sep24'
+            }
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             sx={{ 
               py: 1.5,

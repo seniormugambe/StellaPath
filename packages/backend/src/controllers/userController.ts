@@ -10,7 +10,7 @@ import { AuthRequest, generateToken, verifyWalletSignature } from '../middleware
 import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { CreateUserInput, UpdateUserProfileInput, WalletAuthInput } from '../validators/userValidators';
 import { createLogger } from '../utils/logger';
-import prisma from '../utils/database';
+import { prisma } from '../utils/database';
 
 const logger = createLogger();
 const userRepository = new UserRepository(prisma);

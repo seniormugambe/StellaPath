@@ -17,7 +17,7 @@ export const ESCROW_CONTRACT_ADDRESS = import.meta.env.VITE_ESCROW_CONTRACT_ADDR
 export const INVOICE_CONTRACT_ADDRESS = import.meta.env.VITE_INVOICE_CONTRACT_ADDRESS || ''
 
 // App Configuration
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Stellar DApp'
+export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Stellar-Path'
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0'
 
 // Feature Flags

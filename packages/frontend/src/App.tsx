@@ -1,12 +1,13 @@
 import { Routes, Route } from 'react-router-dom'
 import { Box, Typography, Card, CardContent, Grid, Button } from '@mui/material'
-import { AccountBalanceWallet, SwapHoriz, Lock, Receipt } from '@mui/icons-material'
+import { AccountBalanceWallet, SwapHoriz, Lock, Receipt, SmartToy } from '@mui/icons-material'
 import { Layout } from './components/Layout'
 import { Dashboard } from './components/Dashboard'
 import { TransactionsPage } from './components/Transactions'
 import { EscrowPage } from './components/Escrow'
 import { InvoicePage } from './components/Invoice'
 import { P2PPage } from './components/P2P'
+import { X402Page } from './components/X402'
 import { ClientPortalPage } from './components/ClientPortal'
 import { useAppSelector } from './store/hooks'
 import { useNavigate } from 'react-router-dom'
@@ -67,7 +68,7 @@ function App() {
             </Box>
             
             <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2.4}>
                 <Card sx={{ 
                   height: '100%', 
                   cursor: connected ? 'pointer' : 'default',
@@ -100,7 +101,7 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2.4}>
                 <Card sx={{ 
                   height: '100%', 
                   cursor: connected ? 'pointer' : 'default',
@@ -133,7 +134,40 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2.4}>
+                <Card sx={{ 
+                  height: '100%', 
+                  cursor: connected ? 'pointer' : 'default',
+                  transition: 'all 0.3s ease',
+                  border: '2px solid',
+                  borderColor: 'transparent',
+                  background: (theme) => theme.palette.mode === 'light'
+                    ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)'
+                    : 'linear-gradient(135deg, rgba(37,34,32,0.9) 0%, rgba(37,34,32,0.7) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': connected ? { 
+                    transform: 'translateY(-8px)',
+                    boxShadow: 6,
+                    borderColor: 'secondary.main',
+                    background: (theme) => theme.palette.mode === 'light'
+                      ? 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%)'
+                      : 'linear-gradient(135deg, rgba(37,34,32,1) 0%, rgba(37,34,32,0.95) 100%)',
+                  } : {}
+                }}
+                onClick={() => connected && navigate('/x402')}>
+                  <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                    <SmartToy sx={{ fontSize: 56, color: 'secondary.main', mb: 2 }} />
+                    <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      X402
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      AI agent payments & micropayments
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={2.4}>
                 <Card sx={{ 
                   height: '100%', 
                   cursor: connected ? 'pointer' : 'default',
@@ -166,7 +200,7 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2.4}>
                 <Card sx={{ 
                   height: '100%', 
                   cursor: connected ? 'pointer' : 'default',
@@ -235,6 +269,8 @@ function App() {
         <Route path="/invoices" element={<InvoicePage />} />
         
         <Route path="/p2p" element={<P2PPage />} />
+        
+        <Route path="/x402" element={<X402Page />} />
         
         <Route path="/client/*" element={<ClientPortalPage />} />
       </Routes>

@@ -6,7 +6,6 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  InputAdornment,
   Paper,
   Divider,
   FormControl,
@@ -19,6 +18,8 @@ import {
 } from '@mui/material'
 import { Lock as LockIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { Condition } from '../../types'
+import { useAppSelector } from '../../store/hooks'
+import { MultiWalletAmountInput, type AmountInputSelection } from '../Payment'
 
 export interface EscrowFormData {
   recipient: string
@@ -45,6 +46,8 @@ const defaultCondition = (): ConditionFormItem => ({
 })
 
 export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
+  const { accountId } = useAppSelector((state) => state.wallet)
+  const [paymentSelection, setPaymentSelection] = useState<AmountInputSelection>(null)
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState<number>(0)
   const [expiresAt, setExpiresAt] = useState('')
@@ -117,6 +120,7 @@ export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
       setAmount(0)
       setExpiresAt('')
       setConditions([defaultCondition()])
+      setPaymentSelection(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create escrow')
     }
@@ -222,21 +226,20 @@ export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
             inputProps={{ maxLength: 56, style: { fontFamily: 'monospace', fontSize: '0.9rem' } }}
           />
 
-          <TextField
-            fullWidth
+          <MultiWalletAmountInput
+            value={amount}
+            onChange={(value) => { setAmount(value); clearFieldError('amount') }}
+            onSelectionChange={setPaymentSelection}
+            selection={paymentSelection}
             label="Amount"
-            type="number"
             placeholder="0.00"
-            value={amount || ''}
-            onChange={(e) => { setAmount(parseFloat(e.target.value) || 0); clearFieldError('amount') }}
-            error={!!validationErrors.amount}
-            helperText={validationErrors.amount || 'Amount of XLM to lock in escrow'}
+            asset="XLM"
             disabled={loading}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><strong>XLM</strong></InputAdornment>,
-              inputProps: { min: 0, step: 0.0000001 },
-            }}
-            sx={{ mb: 3 }}
+            error={validationErrors.amount}
+            helperText={validationErrors.amount || 'Amount of XLM to lock in escrow'}
+            minAmount={0}
+            step={0.0000001}
+            showRampOption={true}
           />
 
           <TextField
@@ -362,7 +365,13 @@ export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
             variant="contained"
             fullWidth
             size="large"
-            disabled={loading || !recipient || amount <= 0 || !expiresAt}
+            disabled={
+              loading ||
+              !recipient ||
+              amount <= 0 ||
+              !expiresAt ||
+              paymentMethod === 'stellar_ramp'
+            }
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LockIcon />}
             sx={{
               py: 1.5,

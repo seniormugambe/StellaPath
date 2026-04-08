@@ -8,6 +8,7 @@ A comprehensive transaction management system built on the Stellar blockchain, p
 - **Escrow Services**: Conditional payments with automated release mechanisms
 - **P2P Payments**: Direct peer-to-peer transfers with minimal overhead
 - **Invoice Management**: Create, send, and manage invoices with approval workflows
+- **X402 Protocol**: AI agent payments and micropayments for the agent economy
 - **Smart Contract Security**: Built-in validation, reentrancy protection, and audit trails
 - **Wallet Integration**: Support for Freighter, Albedo, and WalletConnect
 
@@ -201,9 +202,25 @@ For support and questions:
 
 ## 🗺️ Roadmap
 
+- [x] X402 protocol integration for AI agent payments
+- [ ] MCP integration for AI agent discovery
 - [ ] Multi-signature wallet support
 - [ ] Advanced escrow conditions (oracles, time locks)
 - [ ] Mobile application
 - [ ] Integration with additional Stellar wallets
 - [ ] Advanced analytics and reporting
-- [ ] Multi-language support# StellaPath
+- [ ] Multi-language support
+
+## 🤖 X402 Protocol Support
+
+This system supports the **x402 protocol** for AI agent payments and micropayments on Stellar. X402 enables:
+
+- HTTP-native payments without accounts or API keys
+- Autonomous AI agent payments
+- Micropayments with sub-cent pricing
+- ~5 second settlement on Stellar
+- Programmable spending limits
+
+See [X402 Integration Guide](packages/backend/src/docs/X402_INTEGRATION.md) for details.
+
+# StellaPath

@@ -96,6 +96,18 @@ export const Layout = ({ children }: LayoutProps) => {
               >
                 P2P
               </Button>
+              <Button 
+                color="inherit" 
+                onClick={() => navigate('/x402')}
+                sx={{ 
+                  fontWeight: 500,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
+                X402
+              </Button>
             </Box>
           )}
           

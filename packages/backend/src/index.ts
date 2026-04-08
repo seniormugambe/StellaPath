@@ -25,6 +25,7 @@ import transactionRoutes from './routes/transactionRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
 import escrowRoutes from './routes/escrowRoutes';
 import p2pRoutes from './routes/p2pRoutes';
+import x402Routes from './routes/x402Routes';
 
 // Load environment variables
 dotenv.config();
@@ -156,6 +157,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/escrows', escrowRoutes);
 app.use('/api/p2p', p2pRoutes);
+app.use('/api/x402', x402Routes);
 
 // 404 handler
 app.use(notFoundHandler);
