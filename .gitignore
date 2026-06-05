@@ -134,6 +134,8 @@ playwright/.cache/
 # Local development
 .local/
 .cache/
+.kiro
+kiro/
 
 # Soroban
 .soroban/
