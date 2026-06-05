@@ -46,7 +46,6 @@ const defaultCondition = (): ConditionFormItem => ({
 })
 
 export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
-  const { accountId } = useAppSelector((state) => state.wallet)
   const [paymentSelection, setPaymentSelection] = useState<AmountInputSelection>(null)
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState<number>(0)
@@ -89,8 +88,16 @@ export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
       if (c.type === 'time_based' && !c.parameters['targetTime']) {
         errors[`condition_${i}`] = 'Target time is required for time-based conditions'
       }
-      if (c.type === 'manual_approval' && !c.parameters['approverAddress']) {
-        errors[`condition_${i}`] = 'Approver address is required for manual approval conditions'
+      if (c.type === 'manual_approval') {
+        const approverAddress = c.parameters['approverAddress'] || ''
+        if (!approverAddress) {
+          errors[`condition_${i}`] = 'Approver address is required for manual approval conditions'
+        } else if (approverAddress.length !== 56 || !approverAddress.startsWith('G')) {
+          errors[`condition_${i}`] = 'Approver address must be a valid Stellar public key'
+        }
+      }
+      if (c.type === 'oracle_based' && !c.parameters['oracleEndpoint']) {
+        errors[`condition_${i}`] = 'Oracle endpoint is required for oracle-based conditions'
       }
     }
 
@@ -369,8 +376,7 @@ export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
               loading ||
               !recipient ||
               amount <= 0 ||
-              !expiresAt ||
-              paymentMethod === 'stellar_ramp'
+              !expiresAt
             }
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LockIcon />}
             sx={{

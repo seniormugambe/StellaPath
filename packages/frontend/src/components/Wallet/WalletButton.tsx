@@ -3,7 +3,7 @@
  * Button for connecting/disconnecting wallet
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material'
 import {
   AccountBalanceWallet as WalletIcon,
@@ -25,9 +25,7 @@ export const WalletButton = () => {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    
+    // Allow click to bubble to parent handlers where appropriate.
     if (connected) {
       setAnchorEl(event.currentTarget)
     } else {
@@ -43,6 +41,13 @@ export const WalletButton = () => {
     handleClose()
     await disconnect()
   }
+
+  // Listen for global requests to open the wallet dialog
+  useEffect(() => {
+    const handler = () => setDialogOpen(true)
+    window.addEventListener('stellarpath:wallet:open', handler)
+    return () => window.removeEventListener('stellarpath:wallet:open', handler)
+  }, [])
 
   const formatAddress = (address: string | null): string => {
     if (!address) return ''

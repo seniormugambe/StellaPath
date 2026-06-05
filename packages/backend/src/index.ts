@@ -30,9 +30,25 @@ import x402Routes from './routes/x402Routes';
 // Load environment variables
 dotenv.config();
 
+const requiredEnv = [
+  'PORT',
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'CORS_ORIGIN',
+  'FRONTEND_URL',
+];
+
+const missingEnv = requiredEnv.filter((key) => !process.env[key]);
+if (missingEnv.length > 0) {
+  const message = `Missing required environment variables: ${missingEnv.join(', ')}`;
+  const fatalLogger = createLogger();
+  fatalLogger.error(message);
+  throw new Error(message);
+}
+
 const app = express();
 const logger = createLogger();
-const PORT = process.env['PORT'] || 3001;
+const PORT = parseInt(process.env['PORT'] as string, 10) || 3001;
 
 // Security middleware — comprehensive CSP and headers (Req 5.3, 5.4)
 app.use(helmet({

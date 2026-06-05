@@ -8,6 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { Keypair } from 'stellar-sdk';
 import { createLogger } from '../utils/logger';
+import { AppError, ErrorCode } from './errorHandler';
 
 const logger = createLogger();
 
@@ -26,14 +27,14 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
-    res.status(401).json({ error: 'Authentication required', message: 'No token provided' });
+    next(new AppError('Authentication required', 401, true, ErrorCode.AUTH_REQUIRED));
     return;
   }
 
   const jwtSecret = process.env['JWT_SECRET'];
   if (!jwtSecret) {
     logger.error('JWT_SECRET not configured');
-    res.status(500).json({ error: 'Server configuration error' });
+    next(new AppError('Server configuration error', 500, true, ErrorCode.CONFIG_ERROR));
     return;
   }
 
@@ -43,7 +44,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     next();
   } catch (error) {
     logger.warn('Invalid token:', error);
-    res.status(403).json({ error: 'Invalid or expired token' });
+    next(new AppError('Invalid or expired token', 403, true, ErrorCode.AUTH_FORBIDDEN));
   }
 };
 
@@ -73,7 +74,7 @@ export const verifyWalletSignature = (
 export const generateToken = (userId: string, walletAddress: string): string => {
   const jwtSecret = process.env['JWT_SECRET'];
   if (!jwtSecret) {
-    throw new Error('JWT_SECRET not configured');
+    throw new AppError('Server configuration error', 500, true, ErrorCode.CONFIG_ERROR);
   }
 
   const expiresIn = process.env['JWT_EXPIRES_IN'] || '7d';

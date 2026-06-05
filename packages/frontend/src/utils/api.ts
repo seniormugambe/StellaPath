@@ -1,7 +1,12 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import type { ApiResponse } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+if (!VITE_API_BASE_URL && import.meta.env.MODE === 'production') {
+  throw new Error('Missing required environment variable VITE_API_BASE_URL')
+}
+
+const API_BASE_URL = VITE_API_BASE_URL || 'http://localhost:3001/api'
 
 /**
  * Parsed error structure matching the backend standardized format.
@@ -91,7 +96,8 @@ class ApiClient {
           console.warn('API request unauthorized - token may be expired or missing')
 
           // Broadcast an event so other parts of the app can react (e.g., disconnect wallet / prompt re-login)
-          window.dispatchEvent(new CustomEvent('auth:logout', { detail: { status: error.response.status } }))
+          // Namespace the event to avoid collisions with other extensions/scripts
+          window.dispatchEvent(new CustomEvent('stellarpath:auth:logout', { detail: { status: error.response.status, source: 'apiClient' } }))
         }
         return Promise.reject(error)
       }

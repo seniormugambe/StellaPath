@@ -24,7 +24,7 @@ function App() {
       <Routes>
         <Route path="/" element={
           <Box>
-            <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Box sx={{ textAlign: 'center', mb: 6, px: { xs: 2, md: 0 } }}>
               <Typography 
                 variant="h2" 
                 component="h1" 
@@ -68,10 +68,10 @@ function App() {
             </Box>
             
             <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <Card sx={{ 
                   height: '100%', 
-                  cursor: connected ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   border: '2px solid',
                   borderColor: 'transparent',
@@ -79,16 +79,16 @@ function App() {
                     ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)'
                     : 'linear-gradient(135deg, rgba(37,34,32,0.9) 0%, rgba(37,34,32,0.7) 100%)',
                   backdropFilter: 'blur(10px)',
-                  '&:hover': connected ? { 
+                  '&:hover': {
                     transform: 'translateY(-8px)',
                     boxShadow: 6,
                     borderColor: 'secondary.main',
                     background: (theme) => theme.palette.mode === 'light'
                       ? 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%)'
                       : 'linear-gradient(135deg, rgba(37,34,32,1) 0%, rgba(37,34,32,0.95) 100%)',
-                  } : {}
+                  }
                 }}
-                onClick={() => connected && navigate('/transactions')}>
+                onClick={() => navigate('/transactions')}>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <SwapHoriz sx={{ fontSize: 56, color: 'secondary.main', mb: 2 }} />
                     <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -101,10 +101,10 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <Card sx={{ 
                   height: '100%', 
-                  cursor: connected ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   border: '2px solid',
                   borderColor: 'transparent',
@@ -112,16 +112,16 @@ function App() {
                     ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)'
                     : 'linear-gradient(135deg, rgba(37,34,32,0.9) 0%, rgba(37,34,32,0.7) 100%)',
                   backdropFilter: 'blur(10px)',
-                  '&:hover': connected ? { 
+                  '&:hover': {
                     transform: 'translateY(-8px)',
                     boxShadow: 6,
                     borderColor: 'secondary.main',
                     background: (theme) => theme.palette.mode === 'light'
                       ? 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%)'
                       : 'linear-gradient(135deg, rgba(37,34,32,1) 0%, rgba(37,34,32,0.95) 100%)',
-                  } : {}
+                  }
                 }}
-                onClick={() => connected && navigate('/escrow')}>
+                onClick={() => navigate('/escrow')}>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <Lock sx={{ fontSize: 56, color: 'secondary.main', mb: 2 }} />
                     <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -134,10 +134,10 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <Card sx={{ 
                   height: '100%', 
-                  cursor: connected ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   border: '2px solid',
                   borderColor: 'transparent',
@@ -145,16 +145,16 @@ function App() {
                     ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)'
                     : 'linear-gradient(135deg, rgba(37,34,32,0.9) 0%, rgba(37,34,32,0.7) 100%)',
                   backdropFilter: 'blur(10px)',
-                  '&:hover': connected ? { 
+                  '&:hover': {
                     transform: 'translateY(-8px)',
                     boxShadow: 6,
                     borderColor: 'secondary.main',
                     background: (theme) => theme.palette.mode === 'light'
                       ? 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%)'
                       : 'linear-gradient(135deg, rgba(37,34,32,1) 0%, rgba(37,34,32,0.95) 100%)',
-                  } : {}
+                  }
                 }}
-                onClick={() => connected && navigate('/x402')}>
+                onClick={() => navigate('/x402')}>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <SmartToy sx={{ fontSize: 56, color: 'secondary.main', mb: 2 }} />
                     <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -167,10 +167,10 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <Card sx={{ 
                   height: '100%', 
-                  cursor: connected ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   border: '2px solid',
                   borderColor: 'transparent',
@@ -178,16 +178,16 @@ function App() {
                     ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)'
                     : 'linear-gradient(135deg, rgba(37,34,32,0.9) 0%, rgba(37,34,32,0.7) 100%)',
                   backdropFilter: 'blur(10px)',
-                  '&:hover': connected ? { 
+                  '&:hover': {
                     transform: 'translateY(-8px)',
                     boxShadow: 6,
                     borderColor: 'secondary.main',
                     background: (theme) => theme.palette.mode === 'light'
                       ? 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%)'
                       : 'linear-gradient(135deg, rgba(37,34,32,1) 0%, rgba(37,34,32,0.95) 100%)',
-                  } : {}
+                  }
                 }}
-                onClick={() => connected && navigate('/invoices')}>
+                onClick={() => navigate('/invoices')}>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <Receipt sx={{ fontSize: 56, color: 'secondary.main', mb: 2 }} />
                     <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -200,10 +200,10 @@ function App() {
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={2.4}>
+              <Grid item xs={12} sm={6} md={4} lg={2}>
                 <Card sx={{ 
                   height: '100%', 
-                  cursor: connected ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   border: '2px solid',
                   borderColor: 'transparent',
@@ -211,16 +211,16 @@ function App() {
                     ? 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)'
                     : 'linear-gradient(135deg, rgba(37,34,32,0.9) 0%, rgba(37,34,32,0.7) 100%)',
                   backdropFilter: 'blur(10px)',
-                  '&:hover': connected ? { 
+                  '&:hover': {
                     transform: 'translateY(-8px)',
                     boxShadow: 6,
                     borderColor: 'secondary.main',
                     background: (theme) => theme.palette.mode === 'light'
                       ? 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%)'
                       : 'linear-gradient(135deg, rgba(37,34,32,1) 0%, rgba(37,34,32,0.95) 100%)',
-                  } : {}
+                  }
                 }}
-                onClick={() => connected && navigate('/p2p')}>
+                onClick={() => navigate('/p2p')}>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <AccountBalanceWallet sx={{ fontSize: 56, color: 'secondary.main', mb: 2 }} />
                     <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>

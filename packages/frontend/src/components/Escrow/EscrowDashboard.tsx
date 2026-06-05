@@ -231,7 +231,7 @@ export const EscrowDashboard = ({
                           <ViewIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {escrow.status === 'active' && (
+                      {(escrow.status === 'active' || escrow.status === 'conditions_met') && (
                         <>
                           <Tooltip title="Release Funds" arrow>
                             <IconButton size="small" onClick={() => onRelease(escrow.id)} color="success">

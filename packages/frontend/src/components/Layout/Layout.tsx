@@ -116,7 +116,7 @@ export const Layout = ({ children }: LayoutProps) => {
         </Toolbar>
       </AppBar>
 
-      <Container component="main" sx={{ flexGrow: 1, py: 4, maxWidth: 'xl' }}>
+      <Container component="main" maxWidth="xl" sx={{ flexGrow: 1, py: 4 }}>
         {children}
       </Container>
 

@@ -103,7 +103,14 @@ export const useWallet = (): UseWalletReturn => {
       }
     }
 
-    const handleAuthLogout = () => {
+    const handleAuthLogout = (evt: Event) => {
+      // Only respond to our namespaced logout events with a valid payload
+      const detail = (evt as CustomEvent)?.detail
+      if (!detail || typeof detail.status !== 'number' || detail.source !== 'apiClient') {
+        console.warn('Ignored auth logout event with invalid payload', detail)
+        return
+      }
+
       console.warn('Auth token expired/invalid, forcing wallet disconnect')
       // When auth token is invalid/expired, clear wallet connection state so the user can reconnect.
       disconnect()
@@ -112,9 +119,9 @@ export const useWallet = (): UseWalletReturn => {
     loadAvailableWallets()
     validatePersistedConnection()
 
-    window.addEventListener('auth:logout', handleAuthLogout)
+    window.addEventListener('stellarpath:auth:logout', handleAuthLogout)
     return () => {
-      window.removeEventListener('auth:logout', handleAuthLogout)
+      window.removeEventListener('stellarpath:auth:logout', handleAuthLogout)
     }
   }, [dispatch, walletState.connected, walletState.walletType, disconnect])
 
@@ -187,9 +194,13 @@ export const useWallet = (): UseWalletReturn => {
         }
       }
       
+      // Get the API base URL from environment or use default
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+      const authUrl = `${apiBaseUrl}/users/auth`
+      
       // Send authentication request to backend
-      console.log('🌐 Sending authentication request to backend...')
-      const response = await fetch('http://localhost:3001/api/users/auth', {
+      console.log('🌐 Sending authentication request to:', authUrl)
+      const response = await fetch(authUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +217,12 @@ export const useWallet = (): UseWalletReturn => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         console.error('❌ Backend authentication failed:', errorData)
-        throw new Error(errorData.error || `Authentication failed: ${response.statusText}`)
+        const backendMessage = typeof errorData.error === 'string'
+          ? errorData.error
+          : typeof errorData.error?.message === 'string'
+            ? errorData.error.message
+            : `Authentication failed: ${response.statusText}`
+        throw new Error(backendMessage)
       }
 
       const data = await response.json()
@@ -217,11 +233,20 @@ export const useWallet = (): UseWalletReturn => {
         localStorage.setItem('authToken', data.token)
         console.log('✅ Backend authentication successful, token stored')
       } else {
-        throw new Error(data.error || 'Authentication failed')
+        const backendMessage = typeof data.error === 'string'
+          ? data.error
+          : typeof data.error?.message === 'string'
+            ? data.error.message
+            : 'Authentication failed'
+        throw new Error(backendMessage)
       }
     } catch (error) {
       console.error('❌ Backend authentication failed:', error)
-      // Don't throw error - allow wallet connection to succeed even if backend auth fails
+      // In production, re-throw the error so wallet connection fails if auth fails
+      // In development, allow the connection to proceed for testing
+      if (import.meta.env.MODE !== 'development') {
+        throw error
+      }
       console.warn('⚠️ Continuing without backend authentication - API calls may fail')
     }
   }

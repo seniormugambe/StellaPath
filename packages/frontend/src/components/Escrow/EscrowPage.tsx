@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Box, Tabs, Tab, Paper, Alert, Snackbar, Typography } from '@mui/material'
+import { BackButton } from '../Common/BackButton'
 import { useAppSelector, useAppDispatch } from '../../store/hooks'
 import {
   setEscrows,
@@ -157,26 +158,35 @@ export const EscrowPage = () => {
     dispatch(setConditionStatuses([]))
   }
 
-  if (!connected) {
-    return (
-      <Box sx={{ textAlign: 'center', py: 8 }}>
-        <Paper elevation={3} sx={{ p: 6, maxWidth: 600, mx: 'auto', borderRadius: 3 }}>
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'primary.main' }}>
-            🔐 Wallet Required
-          </Typography>
-          <Alert severity="info" sx={{ mt: 3 }}>
-            Please connect your Stellar wallet to manage escrows
-          </Alert>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Use the "Connect Wallet" button in the top right corner to get started
-          </Typography>
-        </Paper>
-      </Box>
-    )
-  }
+  const persisted = (() => {
+    try {
+      const raw = localStorage.getItem('walletState')
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  })()
+
+  const hasAuthToken = !!localStorage.getItem('authToken')
+
+  const walletBanner = !connected && !hasAuthToken && !(persisted && persisted.connected) ? (
+    <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto', borderRadius: 3, mb: 4 }}>
+        <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, color: 'primary.main' }}>
+          🔐 Wallet Recommended
+        </Typography>
+        <Alert severity="info" sx={{ mt: 1 }}>
+          Connect your Stellar wallet to manage escrows and view private details.
+        </Alert>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          You can still browse existing escrows and learn about creating one before connecting.
+        </Typography>
+      </Paper>
+    </Box>
+  ) : null
 
   return (
     <Box>
+      <BackButton />
+      {walletBanner}
       <Paper elevation={3} sx={{ mb: 4, borderRadius: 2, overflow: 'hidden' }}>
         <Tabs
           value={activeTab}
