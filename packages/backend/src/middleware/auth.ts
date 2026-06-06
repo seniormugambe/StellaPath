@@ -22,7 +22,7 @@ export interface AuthRequest extends Request {
 /**
  * Verify JWT token and attach user to request
  */
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const authenticateToken = (req: AuthRequest, _res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 

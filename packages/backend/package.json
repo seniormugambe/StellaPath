@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').rmSync('dist/docs',{recursive:true,force:true}); require('fs').cpSync('src/docs','dist/docs',{recursive:true})\"",
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:reset": "prisma migrate reset --force",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
     "db:migrate:custom": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
     "db:generate": "prisma generate",

@@ -23,7 +23,7 @@ const router = Router();
 
 /**
  * @route   POST /api/x402/pay
- * @desc    Process x402 payment authorization
+ * @desc    Prepare x402 payment authorization for wallet signing
  * @access  Private
  */
 router.post('/pay', authenticateToken, validateBody(x402PaymentSchema), processX402Payment);

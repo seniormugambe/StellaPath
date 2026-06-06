@@ -32,7 +32,8 @@ export const X402PaymentForm: React.FC = () => {
     step,
     paymentDetails,
     costEstimate,
-    txHash,
+    unsignedXdr,
+    unsignedTxHash,
     error,
     elapsedSeconds,
     canProceedToPayment,
@@ -55,8 +56,8 @@ export const X402PaymentForm: React.FC = () => {
   const stepLabels = [
     { label: 'Request Resource', description: 'Enter resource ID and request payment details' },
     { label: 'Review Payment', description: 'Verify amount and transaction details' },
-    { label: 'Sign Authorization', description: 'Approve payment with your wallet' },
-    { label: 'Complete', description: 'Transaction confirmed ✓' },
+    { label: 'Prepare Authorization', description: 'Create an unsigned transaction for your wallet' },
+    { label: 'Prepared', description: 'Transaction is ready to sign' },
   ];
 
   const getActiveStep = () => {
@@ -191,10 +192,10 @@ export const X402PaymentForm: React.FC = () => {
                     {step === 'signing' || step === 'processing' ? (
                       <>
                         <CircularProgress size={20} sx={{ mr: 1 }} />
-                        {step === 'signing' ? 'Waiting for wallet...' : 'Processing...'}
+                      {step === 'signing' ? 'Preparing...' : 'Preparing...'}
                       </>
                     ) : (
-                      'Approve & Pay'
+                      'Prepare Payment'
                     )}
                   </Button>
                   <Button
@@ -213,10 +214,10 @@ export const X402PaymentForm: React.FC = () => {
                   <CircularProgress size={32} />
                   <Box>
                     <Typography variant="body1">
-                      {step === 'signing' ? 'Waiting for wallet signature...' : 'Processing payment...'}
+                      {step === 'signing' ? 'Preparing unsigned transaction...' : 'Preparing payment...'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Confirm in your wallet to continue
+                      The next step is wallet signing
                     </Typography>
                   </Box>
                 </Box>
@@ -228,19 +229,19 @@ export const X402PaymentForm: React.FC = () => {
                     <CheckCircleIcon sx={{ color: 'success.main', fontSize: 32 }} />
                     <Box>
                       <Typography variant="body1" fontWeight="bold">
-                        Payment Complete!
+                        Payment Prepared
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Completed in {elapsedSeconds}s
+                        Prepared in {elapsedSeconds}s
                       </Typography>
                     </Box>
                   </Box>
 
-                  {txHash && (
+                  {unsignedTxHash && (
                     <Card sx={{ bgcolor: 'success.light', mb: 2 }}>
                       <CardContent>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                          Transaction Hash
+                          Unsigned Transaction Hash
                         </Typography>
                         <Typography
                           variant="body2"
@@ -250,7 +251,27 @@ export const X402PaymentForm: React.FC = () => {
                             fontSize: '0.8rem',
                           }}
                         >
-                          {txHash}
+                          {unsignedTxHash}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {unsignedXdr && (
+                    <Card sx={{ bgcolor: 'background.default', mb: 2 }}>
+                      <CardContent>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Unsigned XDR
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            wordBreak: 'break-all',
+                            fontFamily: 'monospace',
+                            fontSize: '0.8rem',
+                          }}
+                        >
+                          {unsignedXdr}
                         </Typography>
                       </CardContent>
                     </Card>

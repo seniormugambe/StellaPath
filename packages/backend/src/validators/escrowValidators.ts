@@ -43,7 +43,7 @@ export const updateEscrowStatusSchema = z.object({
 });
 
 export const escrowIdParamSchema = z.object({
-  escrowId: z.string().uuid('Invalid escrow ID format')
+  escrowId: z.string().cuid('Invalid escrow ID format')
 });
 
 export const contractIdParamSchema = z.object({

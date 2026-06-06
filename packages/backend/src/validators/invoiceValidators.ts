@@ -55,7 +55,7 @@ export const validateTokenSchema = z.object({
 });
 
 export const invoiceIdParamSchema = z.object({
-  invoiceId: z.string().uuid('Invalid invoice ID format')
+  invoiceId: z.string().cuid('Invalid invoice ID format')
 });
 
 export const approvalTokenParamSchema = z.object({
@@ -63,7 +63,7 @@ export const approvalTokenParamSchema = z.object({
 });
 
 export const lineItemIdParamSchema = z.object({
-  itemId: z.string().uuid('Invalid line item ID format')
+  itemId: z.string().cuid('Invalid line item ID format')
 });
 
 export const createLineItemSchema = z.object({
@@ -80,7 +80,7 @@ export const updateLineItemSchema = z.object({
 });
 
 export const reorderLineItemsSchema = z.object({
-  itemIds: z.array(z.string().uuid('Invalid item ID format'))
+  itemIds: z.array(z.string().cuid('Invalid item ID format'))
 });
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;

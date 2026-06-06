@@ -40,7 +40,6 @@ interface P2PFormProps {
 
 export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
   const dispatch = useAppDispatch()
-  const { accountId } = useAppSelector((state) => state.wallet)
   const [paymentSelection, setPaymentSelection] = useState<AmountInputSelection>(null)
   const { feeEstimate, feeLoading, recipientValid, recipientChecking } = useAppSelector(
     (state) => state.p2p
@@ -83,13 +82,14 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
         `/p2p/validate/${address}`
       )
       if (response.success && response.data) {
+        const validation = response.data
         // For the form, we only block on invalid *format*.
         // Whether the account exists on the network is surfaced by the backend
         // but does not hard-block the input here.
-        dispatch(setRecipientValid(response.data.valid))
+        dispatch(setRecipientValid(validation.valid))
 
-        if (!response.data.valid && response.data.error) {
-          setValidationErrors(prev => ({ ...prev, recipient: response.data.error }))
+        if (!validation.valid && validation.error) {
+          setValidationErrors(prev => ({ ...prev, recipient: validation.error || 'Invalid recipient' }))
         } else {
           setValidationErrors(prev => {
             const next = { ...prev }
@@ -145,7 +145,7 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
     try {
       await onSubmit(formData)
       setFormData({ recipient: '', amount: 0, memo: '' })
-      setPaymentMethod('wallet')
+      setPaymentSelection(null)
       dispatch(setFeeEstimate(null))
       dispatch(setRecipientValid(null))
     } catch (err) {
@@ -317,7 +317,7 @@ export const P2PForm = ({ onSubmit, loading = false }: P2PFormProps) => {
               loading ||
               !formData.recipient ||
               formData.amount <= 0 ||
-              paymentMethod === 'stellar_ramp'
+              paymentSelection?.type === 'sep24'
             }
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
             sx={{

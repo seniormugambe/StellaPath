@@ -32,7 +32,7 @@ const x402Service = new X402Service(
 );
 
 /**
- * Process x402 payment authorization
+ * Prepare x402 payment authorization for wallet signing
  * POST /api/x402/pay
  */
 export async function processX402Payment(req: AuthRequest, res: Response): Promise<void> {
@@ -62,7 +62,8 @@ export async function processX402Payment(req: AuthRequest, res: Response): Promi
       res.status(result.statusCode || 200).json({
         success: true,
         data: {
-          txHash: result.txHash,
+          unsignedXdr: result.unsignedXdr,
+          unsignedTxHash: result.unsignedTxHash,
           transaction: result.transaction
         }
       });

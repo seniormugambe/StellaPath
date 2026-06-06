@@ -26,7 +26,7 @@ export const updateTransactionStatusSchema = z.object({
 });
 
 export const transactionIdParamSchema = z.object({
-  transactionId: z.string().uuid('Invalid transaction ID format')
+  transactionId: z.string().cuid('Invalid transaction ID format')
 });
 
 export const txHashParamSchema = z.object({

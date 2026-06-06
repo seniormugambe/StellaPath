@@ -94,7 +94,8 @@ export interface ApiResponse<T> {
 
 export interface TransactionResult {
   success: boolean
-  txHash?: string
+  unsignedXdr?: string
+  unsignedTxHash?: string
   error?: string
 }
 

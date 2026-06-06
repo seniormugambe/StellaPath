@@ -5,23 +5,22 @@
  */
 
 import { Response } from 'express';
-import { EscrowRepository } from '../repositories';
+import { EscrowRepository, TransactionRepository } from '../repositories';
+import { EscrowService } from '../services/EscrowService';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
 import prisma from '../utils/database';
-import { randomBytes } from 'crypto';
 import { EscrowStatus } from '../types/database';
 
 const logger = createLogger();
 const escrowRepository = new EscrowRepository(prisma);
-
-/**
- * Generate a unique contract ID
- */
-function generateContractId(): string {
-  return `escrow_${randomBytes(16).toString('hex')}`;
-}
+const transactionRepository = new TransactionRepository(prisma);
+const escrowService = new EscrowService(escrowRepository, transactionRepository, {
+  networkPassphrase: process.env['STELLAR_PASSPHRASE'] || 'Test SDF Network ; September 2015',
+  horizonUrl: process.env['STELLAR_HORIZON_URL'] || 'https://horizon-testnet.stellar.org',
+  contractId: process.env['ESCROW_CONTRACT_ID'] || 'local-escrow-service'
+});
 
 /**
  * Create a new escrow
@@ -32,7 +31,7 @@ export const createEscrow = asyncHandler(async (req: AuthRequest, res: Response)
     throw new AppError('Not authenticated', 401);
   }
 
-  const { recipientId, amount, conditions, expiresAt } = req.body;
+  const { recipientId, recipientAddress, amount, conditions, expiresAt } = req.body;
 
   // Validate amount
   if (amount <= 0) {
@@ -50,20 +49,21 @@ export const createEscrow = asyncHandler(async (req: AuthRequest, res: Response)
     throw new AppError('At least one condition is required', 400);
   }
 
-  // Generate unique contract ID
-  const contractId = generateContractId();
-
-  // Create escrow
-  const escrow = await escrowRepository.create({
-    contractId,
-    creatorId: req.user.id,
+  const result = await escrowService.createEscrow({
+    userId: req.user.id,
     recipientId,
+    recipientAddress,
     amount,
     conditions,
     expiresAt: expirationDate
   });
 
-  logger.info(`Escrow created: ${escrow.id} (${contractId})`);
+  if (!result.success || !result.escrow) {
+    throw new AppError(result.error || 'Failed to create escrow', 400);
+  }
+
+  const escrow = result.escrow;
+  logger.info(`Escrow created: ${escrow.id} (${escrow.contractId})`);
 
   res.status(201).json({
     success: true,
@@ -85,7 +85,7 @@ export const createEscrow = asyncHandler(async (req: AuthRequest, res: Response)
  * GET /api/escrows/:escrowId
  */
 export const getEscrow = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const escrowId = req.params.escrowId;
+  const escrowId = req.params['escrowId'];
   if (!escrowId) {
     throw new AppError('Escrow ID is required', 400);
   }
@@ -123,7 +123,7 @@ export const getEscrow = asyncHandler(async (req: AuthRequest, res: Response) =>
  * GET /api/escrows/contract/:contractId
  */
 export const getEscrowByContractId = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const contractId = req.params.contractId;
+  const contractId = req.params['contractId'];
   if (!contractId) {
     throw new AppError('Contract ID is required', 400);
   }
@@ -227,7 +227,7 @@ export const getActiveEscrows = asyncHandler(async (req: AuthRequest, res: Respo
  * GET /api/escrows/:escrowId/conditions
  */
 export const checkEscrowConditions = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const escrowId = req.params.escrowId;
+  const escrowId = req.params['escrowId'];
   if (!escrowId) {
     throw new AppError('Escrow ID is required', 400);
   }
@@ -243,8 +243,7 @@ export const checkEscrowConditions = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError('Unauthorized to access this escrow', 403);
   }
 
-  // Check conditions
-  const conditionStatuses = await escrowRepository.checkConditions(escrowId);
+  const conditionStatuses = await escrowService.checkConditions(escrowId);
 
   res.json({
     success: true,
@@ -261,7 +260,7 @@ export const checkEscrowConditions = asyncHandler(async (req: AuthRequest, res: 
  * POST /api/escrows/:escrowId/release
  */
 export const releaseEscrow = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const escrowId = req.params.escrowId;
+  const escrowId = req.params['escrowId'];
   if (!escrowId) {
     throw new AppError('Escrow ID is required', 400);
   }
@@ -282,19 +281,13 @@ export const releaseEscrow = asyncHandler(async (req: AuthRequest, res: Response
     throw new AppError('Only the escrow creator can release funds', 403);
   }
 
-  // Check if escrow is in active state
-  if (escrow.status !== EscrowStatus.ACTIVE && escrow.status !== EscrowStatus.CONDITIONS_MET) {
-    throw new AppError(`Escrow cannot be released (current status: ${escrow.status})`, 400);
+  const result = await escrowService.releaseEscrow(escrowId, txHash);
+  if (!result.success || !result.escrow) {
+    throw new AppError(result.error || 'Failed to release escrow', 400);
   }
 
-  // Update escrow status to released
-  const updatedEscrow = await escrowRepository.updateStatus(escrowId, {
-    status: EscrowStatus.RELEASED,
-    releasedAt: new Date(),
-    txHash
-  });
-
   logger.info(`Escrow released: ${escrowId} with txHash: ${txHash}`);
+  const updatedEscrow = result.escrow;
 
   res.json({
     success: true,
@@ -314,7 +307,7 @@ export const releaseEscrow = asyncHandler(async (req: AuthRequest, res: Response
  * POST /api/escrows/:escrowId/refund
  */
 export const refundEscrow = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const escrowId = req.params.escrowId;
+  const escrowId = req.params['escrowId'];
   if (!escrowId) {
     throw new AppError('Escrow ID is required', 400);
   }
@@ -335,25 +328,13 @@ export const refundEscrow = asyncHandler(async (req: AuthRequest, res: Response)
     throw new AppError('Only the escrow creator can request refund', 403);
   }
 
-  // Check if escrow can be refunded (expired or active)
-  if (escrow.status !== EscrowStatus.ACTIVE && escrow.status !== EscrowStatus.EXPIRED) {
-    throw new AppError(`Escrow cannot be refunded (current status: ${escrow.status})`, 400);
+  const result = await escrowService.refundEscrow(escrowId, txHash);
+  if (!result.success || !result.escrow) {
+    throw new AppError(result.error || 'Failed to refund escrow', 400);
   }
-
-  // Check if escrow is expired
-  const isExpired = new Date() > escrow.expiresAt;
-  if (!isExpired && escrow.status === EscrowStatus.ACTIVE) {
-    throw new AppError('Escrow can only be refunded after expiration', 400);
-  }
-
-  // Update escrow status to refunded
-  const updatedEscrow = await escrowRepository.updateStatus(escrowId, {
-    status: EscrowStatus.REFUNDED,
-    releasedAt: new Date(),
-    txHash
-  });
 
   logger.info(`Escrow refunded: ${escrowId} with txHash: ${txHash}`);
+  const updatedEscrow = result.escrow;
 
   res.json({
     success: true,
@@ -373,7 +354,7 @@ export const refundEscrow = asyncHandler(async (req: AuthRequest, res: Response)
  * PATCH /api/escrows/:escrowId/status
  */
 export const updateEscrowStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const escrowId = req.params.escrowId;
+  const escrowId = req.params['escrowId'];
   if (!escrowId) {
     throw new AppError('Escrow ID is required', 400);
   }

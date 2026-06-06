@@ -33,7 +33,8 @@ export interface X402PaymentRequest {
 export interface X402PaymentResponse {
   success: boolean
   data?: {
-    txHash: string
+    unsignedXdr: string
+    unsignedTxHash: string
     transaction: unknown
   }
   error?: {
@@ -94,15 +95,16 @@ export async function requestX402Resource(resourceId: string): Promise<X402Resou
 }
 
 /**
- * Process x402 payment (requires JWT).
+ * Prepare x402 payment for wallet signing (requires JWT).
  */
 export async function processX402Payment(payment: X402PaymentRequest): Promise<X402PaymentResponse> {
-  const res = await apiClient.post<{ txHash: string; transaction: unknown }>('/x402/pay', payment)
+  const res = await apiClient.post<{ unsignedXdr: string; unsignedTxHash: string; transaction: unknown }>('/x402/pay', payment)
   if (res.success && res.data) {
     return {
       success: true,
       data: {
-        txHash: res.data.txHash,
+        unsignedXdr: res.data.unsignedXdr,
+        unsignedTxHash: res.data.unsignedTxHash,
         transaction: res.data.transaction,
       },
     }

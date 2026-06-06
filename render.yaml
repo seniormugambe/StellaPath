@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: stellarpath-backend
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci && npm run db:generate --workspace=backend && npm run build --workspace=backend
+    preDeployCommand: npm run db:push --workspace=backend
+    startCommand: npm run start --workspace=backend
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - package.json
+        - package-lock.json
+        - render.yaml
+        - packages/backend/**
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLIENT_PORTAL_URL
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: STELLAR_NETWORK
+        value: testnet
+      - key: STELLAR_HORIZON_URL
+        value: https://horizon-testnet.stellar.org
+      - key: STELLAR_PASSPHRASE
+        value: Test SDF Network ; September 2015
+      - key: SOROBAN_RPC_URL
+        value: https://soroban-testnet.stellar.org
+      - key: SOROBAN_NETWORK_PASSPHRASE
+        value: Test SDF Network ; September 2015
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      - key: CONDITION_CHECK_INTERVAL
+        value: "300000"
+      - key: INVOICE_EXPIRATION_CHECK_INTERVAL
+        value: "3600000"
+      - key: TRANSACTION_SYNC_INTERVAL
+        value: "60000"

@@ -82,7 +82,7 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
  * GET /api/invoices/:invoiceId
  */
 export const getInvoice = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const invoiceId = req.params.invoiceId;
+  const invoiceId = req.params['invoiceId'];
   if (!invoiceId) {
     throw new AppError('Invoice ID is required', 400);
   }
@@ -169,7 +169,7 @@ export const getInvoices = asyncHandler(async (req: AuthRequest, res: Response) 
  * PATCH /api/invoices/:invoiceId/status
  */
 export const updateInvoiceStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const invoiceId = req.params.invoiceId;
+  const invoiceId = req.params['invoiceId'];
   if (!invoiceId) {
     throw new AppError('Invoice ID is required', 400);
   }
@@ -250,7 +250,7 @@ export const getInvoiceStats = asyncHandler(async (req: AuthRequest, res: Respon
  * GET /api/invoices/public/:approvalToken
  */
 export const getPublicInvoice = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const approvalToken = req.params.approvalToken;
+  const approvalToken = req.params['approvalToken'];
   if (!approvalToken) {
     throw new AppError('Approval token is required', 400);
   }
@@ -454,7 +454,7 @@ export const rejectInvoice = asyncHandler(async (req: AuthRequest, res: Response
  * POST /api/invoices/:invoiceId/execute
  */
 export const executeInvoice = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const invoiceId = req.params.invoiceId;
+  const invoiceId = req.params['invoiceId'];
   if (!invoiceId) {
     throw new AppError('Invoice ID is required', 400);
   }
@@ -510,7 +510,7 @@ export const addLineItem = asyncHandler(async (req: AuthRequest, res: Response) 
     throw new AppError('Not authenticated', 401);
   }
 
-  const invoiceId = req.params.invoiceId;
+  const invoiceId = req.params['invoiceId'];
   if (!invoiceId) {
     throw new AppError('Invoice ID is required', 400);
   }
@@ -564,8 +564,8 @@ export const updateLineItem = asyncHandler(async (req: AuthRequest, res: Respons
     throw new AppError('Not authenticated', 401);
   }
 
-  const invoiceId = req.params.invoiceId;
-  const itemId = req.params.itemId;
+  const invoiceId = req.params['invoiceId'];
+  const itemId = req.params['itemId'];
   if (!invoiceId || !itemId) {
     throw new AppError('Invoice ID and line item ID are required', 400);
   }
@@ -615,8 +615,8 @@ export const deleteLineItem = asyncHandler(async (req: AuthRequest, res: Respons
     throw new AppError('Not authenticated', 401);
   }
 
-  const invoiceId = req.params.invoiceId;
-  const itemId = req.params.itemId;
+  const invoiceId = req.params['invoiceId'];
+  const itemId = req.params['itemId'];
   if (!invoiceId || !itemId) {
     throw new AppError('Invoice ID and line item ID are required', 400);
   }
@@ -659,7 +659,7 @@ export const reorderLineItems = asyncHandler(async (req: AuthRequest, res: Respo
     throw new AppError('Not authenticated', 401);
   }
 
-  const invoiceId = req.params.invoiceId;
+  const invoiceId = req.params['invoiceId'];
   if (!invoiceId) {
     throw new AppError('Invoice ID is required', 400);
   }

@@ -28,7 +28,7 @@ const x402Service = new X402Service(
 );
 
 /**
- * Example 1: Process a simple x402 payment
+ * Example 1: Prepare a simple x402 payment for wallet signing
  */
 async function example1_SimplePayment() {
   const result = await x402Service.processPayment({
@@ -42,8 +42,9 @@ async function example1_SimplePayment() {
   });
 
   if (result.success) {
-    console.log('Payment successful!');
-    console.log('Transaction hash:', result.txHash);
+    console.log('Payment prepared for signing!');
+    console.log('Unsigned transaction hash:', result.unsignedTxHash);
+    console.log('Unsigned XDR:', result.unsignedXdr);
     console.log('Transaction:', result.transaction);
   } else {
     console.error('Payment failed:', result.error);
@@ -160,8 +161,8 @@ async function example7_AgentFlow() {
   const estimate = await x402Service.estimateCost(0.001);
   console.log(`   Total cost: $${estimate.totalCost}`);
 
-  // Step 3: Agent authorizes payment
-  console.log('3. Agent authorizes payment...');
+  // Step 3: Agent prepares payment authorization
+  console.log('3. Agent prepares payment authorization...');
   const result = await x402Service.processPayment({
     userId: 'agent_ai_123',
     walletAddress: 'GAGENTWALLETADDRESSXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
@@ -172,9 +173,8 @@ async function example7_AgentFlow() {
   });
 
   if (result.success) {
-    console.log('4. Payment confirmed:', result.txHash);
-    console.log('5. Agent accesses resource');
-    // Agent can now access the weather data
+    console.log('4. Unsigned transaction prepared:', result.unsignedTxHash);
+    console.log('5. Agent signs and submits the transaction');
   }
 }
 

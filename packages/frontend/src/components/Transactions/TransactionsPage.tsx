@@ -95,7 +95,10 @@ export const TransactionsPage = () => {
   }
 
   const handleCreateTransaction = async (formData: TransactionFormData) => {
-    if (!accountId) {
+    let senderAccount: string
+    if (accountId) {
+      senderAccount = accountId
+    } else {
       // Prompt user to connect their wallet and wait for connection
       const { default: requireWallet } = await import('../../utils/requireWallet')
       try {
@@ -109,31 +112,36 @@ export const TransactionsPage = () => {
       if (!currentAccount) {
         throw new Error('Wallet not connected')
       }
+      senderAccount = currentAccount
     }
 
     dispatch(setLoading(true))
     try {
       const response = await apiClient.post<TransactionResult>('/transactions/create', {
         ...formData,
-        sender: accountId,
+        sender: senderAccount,
       })
 
       if (response.success && response.data) {
         // Create a new transaction object
         const newTransaction: Transaction = {
-          id: response.data.txHash || `temp-${Date.now()}`,
+          id: response.data.unsignedTxHash || `temp-${Date.now()}`,
           type: formData.type,
-          sender: accountId,
+          sender: senderAccount,
           recipient: formData.recipient,
           amount: formData.amount,
           status: 'pending',
           timestamp: new Date(),
-          txHash: response.data.txHash,
-          metadata: formData.memo ? { memo: formData.memo } : undefined,
+          txHash: response.data.unsignedTxHash,
+          metadata: {
+            ...(formData.memo ? { memo: formData.memo } : {}),
+            unsignedXdr: response.data.unsignedXdr,
+            preparedOnly: true,
+          },
         }
 
         dispatch(addTransaction(newTransaction))
-        setSuccessMessage('Transaction created successfully!')
+        setSuccessMessage('Transaction prepared for wallet signing.')
         setActiveTab(1) // Switch to history tab
       } else {
         throw new Error(response.error || 'Failed to create transaction')

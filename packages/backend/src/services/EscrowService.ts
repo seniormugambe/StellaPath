@@ -22,8 +22,10 @@ export interface EscrowResult {
 
 export interface EscrowParams {
   userId: string;
-  sender: string;
-  recipient: string;
+  sender?: string;
+  recipient?: string;
+  recipientId?: string;
+  recipientAddress?: string;
   amount: number;
   conditions: Condition[];
   expiresAt: Date;
@@ -79,28 +81,30 @@ export class EscrowService {
     try {
       logger.info('Creating escrow', { 
         sender: params.sender, 
-        recipient: params.recipient, 
+        recipient: params.recipient || params.recipientAddress || params.recipientId, 
         amount: params.amount 
       });
 
-      if (!StellarSdk.StrKey.isValidEd25519PublicKey(params.sender)) {
-        return { success: false, error: 'Invalid sender address' };
-      }
+      if (params.sender || params.recipient) {
+        if (!params.sender || !StellarSdk.StrKey.isValidEd25519PublicKey(params.sender)) {
+          return { success: false, error: 'Invalid sender address' };
+        }
 
-      if (!StellarSdk.StrKey.isValidEd25519PublicKey(params.recipient)) {
-        return { success: false, error: 'Invalid recipient address' };
-      }
+        if (!params.recipient || !StellarSdk.StrKey.isValidEd25519PublicKey(params.recipient)) {
+          return { success: false, error: 'Invalid recipient address' };
+        }
 
-      const account = await this.server.loadAccount(params.sender);
-      const nativeBalance = account.balances.find(b => b.asset_type === 'native');
-      
-      if (!nativeBalance || nativeBalance.asset_type !== 'native') {
-        return { success: false, error: 'No native balance found' };
-      }
+        const account = await this.server.loadAccount(params.sender);
+        const nativeBalance = account.balances.find(b => b.asset_type === 'native');
+        
+        if (!nativeBalance || nativeBalance.asset_type !== 'native') {
+          return { success: false, error: 'No native balance found' };
+        }
 
-      const balance = parseFloat(nativeBalance.balance);
-      if (balance < params.amount) {
-        return { success: false, error: 'Insufficient balance' };
+        const balance = parseFloat(nativeBalance.balance);
+        if (balance < params.amount) {
+          return { success: false, error: 'Insufficient balance' };
+        }
       }
 
       const contractId = `escrow_${uuidv4()}`;
@@ -108,6 +112,7 @@ export class EscrowService {
       const escrow = await this.escrowRepository.create({
         contractId,
         creatorId: params.userId,
+        ...(params.recipientId ? { recipientId: params.recipientId } : {}),
         amount: params.amount,
         conditions: params.conditions,
         expiresAt: params.expiresAt
@@ -179,25 +184,27 @@ export class EscrowService {
     return condition.parameters['approved'] === true;
   }
 
-  async releaseEscrow(escrowId: string): Promise<EscrowResult> {
+  async releaseEscrow(escrowId: string, submittedTxHash?: string): Promise<EscrowResult> {
     try {
       const escrow = await this.escrowRepository.findById(escrowId);
       if (!escrow) {
         return { success: false, error: 'Escrow not found' };
       }
 
-      if (escrow.status !== EscrowStatus.ACTIVE) {
-        return { success: false, error: 'Escrow is not active' };
+      if (escrow.status !== EscrowStatus.ACTIVE && escrow.status !== EscrowStatus.CONDITIONS_MET) {
+        return { success: false, error: `Escrow cannot be released (current status: ${escrow.status})` };
       }
 
-      const conditionStatuses = await this.checkConditions(escrowId);
-      const allConditionsMet = conditionStatuses.every(cs => cs.met);
+      const conditionStatuses = escrow.status === EscrowStatus.CONDITIONS_MET
+        ? []
+        : await this.checkConditions(escrowId);
+      const allConditionsMet = escrow.status === EscrowStatus.CONDITIONS_MET || conditionStatuses.every(cs => cs.met);
 
       if (!allConditionsMet) {
         return { success: false, error: 'Not all conditions are met' };
       }
 
-      const txHash = `release_${uuidv4()}`;
+      const txHash = submittedTxHash || `release_${uuidv4()}`;
 
       const updatedEscrow = await this.escrowRepository.updateStatus(escrowId, {
         status: EscrowStatus.RELEASED,
@@ -232,23 +239,23 @@ export class EscrowService {
     }
   }
 
-  async refundEscrow(escrowId: string): Promise<EscrowResult> {
+  async refundEscrow(escrowId: string, submittedTxHash?: string): Promise<EscrowResult> {
     try {
       const escrow = await this.escrowRepository.findById(escrowId);
       if (!escrow) {
         return { success: false, error: 'Escrow not found' };
       }
 
-      if (escrow.status !== EscrowStatus.ACTIVE) {
-        return { success: false, error: 'Escrow is not active' };
+      if (escrow.status !== EscrowStatus.ACTIVE && escrow.status !== EscrowStatus.EXPIRED) {
+        return { success: false, error: `Escrow cannot be refunded (current status: ${escrow.status})` };
       }
 
       const now = new Date();
-      if (now < escrow.expiresAt) {
+      if (escrow.status === EscrowStatus.ACTIVE && now < escrow.expiresAt) {
         return { success: false, error: 'Escrow has not expired yet' };
       }
 
-      const txHash = `refund_${uuidv4()}`;
+      const txHash = submittedTxHash || `refund_${uuidv4()}`;
 
       const updatedEscrow = await this.escrowRepository.updateStatus(escrowId, {
         status: EscrowStatus.REFUNDED,

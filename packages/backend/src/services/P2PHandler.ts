@@ -18,7 +18,8 @@ export interface P2PPaymentParams {
 
 export interface P2PPaymentResult {
   success: boolean;
-  txHash?: string;
+  unsignedXdr?: string;
+  unsignedTxHash?: string;
   transaction?: TransactionRecord;
   error?: string;
 }
@@ -109,12 +110,13 @@ export class P2PHandler {
       }
 
       const builtTx = transaction.build();
-      const txHash = builtTx.hash().toString('hex');
+      const unsignedTxHash = builtTx.hash().toString('hex');
+      const unsignedXdr = builtTx.toXDR();
 
       const transactionRecord = await this.transactionRepository.create({
         userId: params.userId,
         type: TransactionType.P2P,
-        txHash,
+        txHash: unsignedTxHash,
         amount: params.amount,
         sender: params.sender,
         recipient: params.recipient,
@@ -122,15 +124,17 @@ export class P2PHandler {
         metadata: attachAnchorMetadata({
           ...(params.memo ? { memo: params.memo } : {}),
           timestamp: new Date().toISOString(),
-          paymentType: 'p2p'
+          paymentType: 'p2p',
+          preparedOnly: true
         })
       });
 
-      logger.info('P2P payment processed', { txHash });
+      logger.info('P2P payment prepared for wallet signing', { unsignedTxHash });
 
       return { 
         success: true, 
-        txHash, 
+        unsignedXdr,
+        unsignedTxHash,
         transaction: transactionRecord 
       };
     } catch (error) {

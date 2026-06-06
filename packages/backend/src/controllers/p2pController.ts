@@ -47,7 +47,8 @@ export async function sendP2PPayment(req: AuthRequest, res: Response): Promise<v
       res.json({
         success: true,
         data: {
-          txHash: result.txHash,
+          unsignedXdr: result.unsignedXdr,
+          unsignedTxHash: result.unsignedTxHash,
           transaction: result.transaction
         }
       });

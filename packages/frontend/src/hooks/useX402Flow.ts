@@ -22,7 +22,8 @@ export interface X402FlowState {
   resourceId: string
   paymentDetails: X402PaymentDetails | null
   costEstimate: X402CostEstimate | null
-  txHash: string | null
+  unsignedXdr: string | null
+  unsignedTxHash: string | null
   error: string | null
   startTime: number | null
   elapsedSeconds: number
@@ -41,7 +42,8 @@ const INITIAL_STATE: X402FlowState = {
   resourceId: '',
   paymentDetails: null,
   costEstimate: null,
-  txHash: null,
+  unsignedXdr: null,
+  unsignedTxHash: null,
   error: null,
   startTime: null,
   elapsedSeconds: 0,
@@ -159,7 +161,7 @@ export const useX402Flow = (): UseX402FlowReturn => {
           step: 'processing',
         }))
 
-        // Step 3: Send authorization to backend for payment processing
+        // Step 3: Ask backend to prepare an unsigned transaction for wallet signing
         const paymentRequest = {
           walletAddress: accountId,
           resourceUrl: state.paymentDetails.resourceUrl,
@@ -181,7 +183,8 @@ export const useX402Flow = (): UseX402FlowReturn => {
         setState((prev) => ({
           ...prev,
           step: 'complete',
-          txHash: result.data?.txHash || null,
+          unsignedXdr: result.data?.unsignedXdr || null,
+          unsignedTxHash: result.data?.unsignedTxHash || null,
           elapsedSeconds,
           error: null,
         }))
@@ -206,4 +209,3 @@ export const useX402Flow = (): UseX402FlowReturn => {
     isProcessing,
   }
 }
-

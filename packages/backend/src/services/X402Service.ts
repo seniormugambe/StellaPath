@@ -38,7 +38,8 @@ export interface X402PaymentAuthorization {
 
 export interface X402PaymentResult {
   success: boolean;
-  txHash?: string;
+  unsignedXdr?: string;
+  unsignedTxHash?: string;
   transaction?: TransactionRecord;
   error?: string;
   statusCode?: number;
@@ -95,14 +96,14 @@ export class X402Service {
   }
 
   /**
-   * Process x402 payment for a resource
-   * Implements the x402 payment flow: request -> 402 response -> payment -> resource
+   * Prepare an x402 payment transaction for a resource.
+   * The returned unsigned XDR must be signed and submitted by the client wallet.
    */
   async processPayment(
     authorization: X402PaymentAuthorization
   ): Promise<X402PaymentResult> {
     try {
-      logger.info('Processing x402 payment', {
+      logger.info('Preparing x402 payment for wallet signing', {
         userId: authorization.userId,
         resourceUrl: authorization.resourceUrl,
         amount: authorization.amount
@@ -165,13 +166,14 @@ export class X402Service {
       transaction.addMemo(StellarSdk.Memo.text(x402Memo.substring(0, 28)));
 
       const builtTx = transaction.build();
-      const txHash = builtTx.hash().toString('hex');
+      const unsignedTxHash = builtTx.hash().toString('hex');
+      const unsignedXdr = builtTx.toXDR();
 
       // Record transaction
       const transactionRecord = await this.transactionRepository.create({
         userId: authorization.userId,
         type: TransactionType.P2P, // x402 is a specialized P2P payment
-        txHash,
+        txHash: unsignedTxHash,
         amount: authorization.amount,
         sender: authorization.walletAddress,
         recipient: authorization.payTo,
@@ -181,18 +183,20 @@ export class X402Service {
           resourceUrl: authorization.resourceUrl,
           asset: asset === StellarSdk.Asset.native() ? 'XLM' : `${asset.code}:${asset.issuer}`,
           timestamp: new Date().toISOString(),
-          memo: x402Memo
+          memo: x402Memo,
+          preparedOnly: true
         })
       });
 
-      logger.info('x402 payment processed', { 
-        txHash, 
+      logger.info('x402 payment prepared for wallet signing', { 
+        unsignedTxHash,
         resourceUrl: authorization.resourceUrl 
       });
 
       return {
         success: true,
-        txHash,
+        unsignedXdr,
+        unsignedTxHash,
         transaction: transactionRecord,
         statusCode: 200
       };

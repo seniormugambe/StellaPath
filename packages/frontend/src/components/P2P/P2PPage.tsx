@@ -59,7 +59,10 @@ export const P2PPage = () => {
   }
 
   const handleSendPayment = async (formData: P2PFormData) => {
-    if (!accountId) {
+    let senderAccount: string
+    if (accountId) {
+      senderAccount = accountId
+    } else {
       const { default: requireWallet } = await import('../../utils/requireWallet')
       try {
         await requireWallet()
@@ -71,31 +74,33 @@ export const P2PPage = () => {
       if (!currentAccount) {
         throw new Error('Wallet not connected')
       }
+      senderAccount = currentAccount
     }
 
     dispatch(setLoading(true))
     try {
       const response = await apiClient.post<{
         success: boolean
-        txHash?: string
+        unsignedXdr?: string
+        unsignedTxHash?: string
         transaction?: any
         error?: string
       }>('/p2p/send', {
-        sender: accountId,
+        sender: senderAccount,
         recipient: formData.recipient,
         amount: formData.amount,
         memo: formData.memo,
       })
 
-      if (response.success && response.data?.txHash) {
+      if (response.success && response.data?.unsignedTxHash) {
         const newPayment: P2PPayment = {
-          id: response.data.txHash || `p2p-${Date.now()}`,
-          sender: accountId,
+          id: response.data.unsignedTxHash || `p2p-${Date.now()}`,
+          sender: senderAccount,
           recipient: formData.recipient,
           amount: formData.amount,
           memo: formData.memo,
           status: 'pending',
-          txHash: response.data.txHash,
+          txHash: response.data.unsignedTxHash,
           timestamp: new Date().toISOString(),
         }
 
@@ -105,16 +110,20 @@ export const P2PPage = () => {
         dispatch(addTransaction({
           id: newPayment.id,
           type: 'p2p',
-          sender: accountId,
+          sender: senderAccount,
           recipient: formData.recipient,
           amount: formData.amount,
           status: 'pending',
           timestamp: new Date(),
-          txHash: response.data.txHash,
-          metadata: formData.memo ? { memo: formData.memo } : undefined,
+          txHash: response.data.unsignedTxHash,
+          metadata: {
+            ...(formData.memo ? { memo: formData.memo } : {}),
+            unsignedXdr: response.data.unsignedXdr,
+            preparedOnly: true,
+          },
         }))
 
-        setSuccessMessage('P2P payment sent successfully!')
+        setSuccessMessage('P2P payment prepared for wallet signing.')
         setActiveTab(1)
       } else {
         throw new Error(response.data?.error || response.error || 'Failed to send payment')

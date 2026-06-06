@@ -112,22 +112,24 @@ function buildErrorResponse(
   includeDebug?: boolean,
   stack?: string
 ) {
+  const error: Record<string, unknown> = {
+    code,
+    message,
+    recovery: recoverySuggestions[code] || recoverySuggestions[ErrorCode.INTERNAL_ERROR],
+    statusCode,
+  };
+
   const response: { success: boolean; error: Record<string, unknown> } = {
     success: false,
-    error: {
-      code,
-      message,
-      recovery: recoverySuggestions[code] || recoverySuggestions[ErrorCode.INTERNAL_ERROR],
-      statusCode,
-    },
+    error,
   };
 
   if (details) {
-    response.error.details = details;
+    response.error['details'] = details;
   }
 
   if (includeDebug && stack) {
-    response.error.stack = stack;
+    response.error['stack'] = stack;
   }
 
   return response;

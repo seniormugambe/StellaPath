@@ -14,7 +14,8 @@ import { logger } from '../utils/logger';
 
 export interface TransactionResult {
   success: boolean;
-  txHash?: string;
+  unsignedXdr?: string;
+  unsignedTxHash?: string;
   transaction?: TransactionRecord;
   error?: string;
 }
@@ -89,25 +90,27 @@ export class TransactionManager {
       }
 
       const builtTx = transaction.build();
-      const txHash = builtTx.hash().toString('hex');
+      const unsignedTxHash = builtTx.hash().toString('hex');
+      const unsignedXdr = builtTx.toXDR();
 
       const transactionRecord = await this.persistTransaction({
         userId: params.userId,
         type: TransactionType.BASIC,
-        txHash,
+        txHash: unsignedTxHash,
         amount: params.amount,
         sender: params.sender,
         recipient: params.recipient,
         fees: Number(fee),
         metadata: attachAnchorMetadata({ 
           ...(params.memo ? { memo: params.memo } : {}),
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          preparedOnly: true
         })
       });
 
-      logger.info('Basic transaction created', { txHash });
+      logger.info('Basic transaction prepared for wallet signing', { unsignedTxHash });
 
-      return { success: true, txHash, transaction: transactionRecord };
+      return { success: true, unsignedXdr, unsignedTxHash, transaction: transactionRecord };
     } catch (error) {
       logger.error('Error creating basic transaction', { error });
       return {
