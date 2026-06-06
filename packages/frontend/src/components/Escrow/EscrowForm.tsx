@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import {
   Box,
   TextField,
@@ -18,7 +18,6 @@ import {
 } from '@mui/material'
 import { Lock as LockIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
 import { Condition } from '../../types'
-import { useAppSelector } from '../../store/hooks'
 import { MultiWalletAmountInput, type AmountInputSelection } from '../Payment'
 
 export interface EscrowFormData {
@@ -105,7 +104,7 @@ export const EscrowForm = ({ onSubmit, loading = false }: EscrowFormProps) => {
     return Object.keys(errors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
 

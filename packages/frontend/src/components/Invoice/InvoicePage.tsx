@@ -74,7 +74,7 @@ export const InvoicePage = () => {
         dispatch(addInvoice({
           id: invoice.id,
           clientEmail: invoice.clientEmail,
-          amount: invoice.totalAmount,
+          totalAmount: invoice.totalAmount,
           description: invoice.description,
           status: invoice.status,
           dueDate: invoice.dueDate,

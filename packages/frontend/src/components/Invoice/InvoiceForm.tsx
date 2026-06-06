@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import {
   Box,
   TextField,
@@ -6,7 +6,7 @@ import {
   Typography,
   Alert,
   CircularProgress,
-  InputAdornment,
+  
   Paper,
   Divider,
   Table,
@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Fab,
+  
 } from '@mui/material'
 import { Receipt as ReceiptIcon, Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material'
 
@@ -96,7 +96,7 @@ export const InvoiceForm = ({ onSubmit, loading = false }: InvoiceFormProps) => 
     return Object.keys(errors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
 
