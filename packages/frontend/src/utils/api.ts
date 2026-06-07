@@ -1,12 +1,13 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import type { ApiResponse } from '../types'
+import { getApiBaseUrl } from './apiBaseUrl'
 
 const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 if (!VITE_API_BASE_URL && import.meta.env.MODE === 'production') {
   throw new Error('Missing required environment variable VITE_API_BASE_URL')
 }
 
-const API_BASE_URL = VITE_API_BASE_URL || 'http://localhost:3001/api'
+const API_BASE_URL = getApiBaseUrl(VITE_API_BASE_URL)
 
 /**
  * Parsed error structure matching the backend standardized format.

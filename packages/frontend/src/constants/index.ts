@@ -1,5 +1,7 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+import { getApiBaseUrl } from '../utils/apiBaseUrl'
+
+export const API_BASE_URL = getApiBaseUrl()
 export const CLIENT_PORTAL_URL = import.meta.env.VITE_CLIENT_PORTAL_URL || 'http://localhost:3000/client'
 
 // Stellar Network Configuration

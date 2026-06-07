@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { connectWallet, disconnectWallet } from '../store/slices/walletSlice'
 import { WalletManager, type WalletType } from '../utils/wallets'
+import { getApiBaseUrl } from '../utils/apiBaseUrl'
 import type { SignatureRequest } from '../types'
 
 export interface UseWalletReturn {
@@ -195,7 +196,7 @@ export const useWallet = (): UseWalletReturn => {
       }
       
       // Get the API base URL from environment or use default
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+      const apiBaseUrl = getApiBaseUrl()
       const authUrl = `${apiBaseUrl}/users/auth`
       
       // Send authentication request to backend

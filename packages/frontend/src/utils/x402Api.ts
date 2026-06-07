@@ -5,9 +5,10 @@
 
 import axios from 'axios'
 import { apiClient } from './api'
+import { getApiBaseUrl } from './apiBaseUrl'
 import type { ApiResponse } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
+const API_BASE_URL = getApiBaseUrl()
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem('authToken')
