@@ -7,6 +7,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { Keypair } from 'stellar-sdk';
+import { createHash } from 'crypto';
 import { createLogger } from '../utils/logger';
 import { AppError, ErrorCode } from './errorHandler';
 
@@ -58,10 +59,18 @@ export const verifyWalletSignature = (
 ): boolean => {
   try {
     const keypair = Keypair.fromPublicKey(publicKey);
-    const messageBuffer = Buffer.from(message, 'utf8');
     const signatureBuffer = Buffer.from(signature, 'base64');
-    
-    return keypair.verify(messageBuffer, signatureBuffer);
+
+    const rawMessageBuffer = Buffer.from(message, 'utf8');
+    if (keypair.verify(rawMessageBuffer, signatureBuffer)) {
+      return true;
+    }
+
+    const freighterMessageHash = createHash('sha256')
+      .update(`Stellar Signed Message:\n${message}`, 'utf8')
+      .digest();
+
+    return keypair.verify(freighterMessageHash, signatureBuffer);
   } catch (error) {
     logger.error('Signature verification failed:', error);
     return false;
