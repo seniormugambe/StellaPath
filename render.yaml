@@ -24,13 +24,13 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGIN
-        sync: false
+        value: https://stellapath.onrender.com
       - key: FRONTEND_URL
-        sync: false
+        value: https://stellapath.onrender.com
       - key: CLIENT_PORTAL_URL
-        sync: false
+        value: https://stellapath.onrender.com/client
       - key: API_BASE_URL
-        sync: false
+        value: https://stellapathbackend.onrender.com
       - key: STELLAR_NETWORK
         value: testnet
       - key: STELLAR_HORIZON_URL

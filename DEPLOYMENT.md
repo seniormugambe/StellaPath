@@ -59,7 +59,7 @@ REDIS_PASSWORD=your-strong-redis-password
 # Server
 NODE_ENV=production
 PORT=3001
-CORS_ORIGIN=https://your-frontend-domain.com
+CORS_ORIGIN=https://stellapath.onrender.com
 
 # Stellar Network
 STELLAR_NETWORK=testnet  # or mainnet
@@ -83,7 +83,8 @@ cp packages/frontend/.env.production.example packages/frontend/.env.production
 Edit `packages/frontend/.env.production`:
 
 ```env
-VITE_API_BASE_URL=https://your-backend-domain.com
+VITE_API_BASE_URL=https://stellapathbackend.onrender.com/api
+VITE_CLIENT_PORTAL_URL=https://stellapath.onrender.com/client
 ```
 
 ### 2. Verify Docker setup
@@ -236,7 +237,7 @@ NODE_ENV=development
 STELLAR_NETWORK=testnet
 STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
 SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=https://stellapath.onrender.com
 ```
 
 ### 5. Set up the database
@@ -415,13 +416,13 @@ Render auto-deploys on `git push` to main branch.
 
 ```bash
 # Test backend health
-curl https://your-backend-url.onrender.com/health
+curl https://stellapathbackend.onrender.com/health
 
 # Should return:
 # {"status":"ok","timestamp":"...","version":"1.0.0","environment":"production"}
 
 # Test frontend
-# Visit https://your-frontend-url.onrender.com
+# Visit https://stellapath.onrender.com
 ```
 
 #### 5. Database migrations
@@ -469,7 +470,7 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
 |----------|---------|-------------|
 | `PORT` | `3001` | Backend server port |
 | `NODE_ENV` | `development` | Environment (`development`, `production`, `test`) |
-| `CORS_ORIGIN` | `http://localhost:3000` | Allowed CORS origin |
+| `CORS_ORIGIN` | `https://stellapath.onrender.com` | Allowed CORS origin |
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window (ms) |
 | `RATE_LIMIT_MAX_REQUESTS` | `100` | Max requests per window |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
@@ -499,8 +500,8 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
 | `SENDGRID_API_KEY` | — | SendGrid API key (optional) |
 | `FROM_EMAIL` | `noreply@stellar-dapp.com` | Sender email address |
 | `FROM_NAME` | `Stellar DApp` | Sender display name |
-| `FRONTEND_URL` | `http://localhost:3000` | Frontend URL for email links |
-| `CLIENT_PORTAL_URL` | `http://localhost:3000/client` | Client portal URL |
+| `FRONTEND_URL` | `https://stellapath.onrender.com` | Frontend URL for email links |
+| `CLIENT_PORTAL_URL` | `https://stellapath.onrender.com/client` | Client portal URL |
 
 ### Background Jobs
 

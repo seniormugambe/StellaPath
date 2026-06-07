@@ -16,6 +16,7 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_TESTNET: string
   readonly VITE_ENABLE_MAINNET: string
   readonly VITE_ENABLE_DEBUG_MODE: string
+  readonly VITE_ENABLE_WALLETCONNECT: string
 }
 
 interface ImportMeta {

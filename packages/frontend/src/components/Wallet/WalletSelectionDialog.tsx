@@ -38,6 +38,10 @@ interface WalletSelectionDialogProps {
 export const WalletSelectionDialog = ({ open, onClose }: WalletSelectionDialogProps) => {
   const { connect, availableWallets, isConnecting, error, clearError } = useWallet()
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null)
+  const walletOptions: WalletType[] =
+    import.meta.env.VITE_ENABLE_WALLETCONNECT === 'true'
+      ? ['freighter', 'albedo', 'walletconnect']
+      : ['freighter', 'albedo']
 
   const handleWalletSelect = async (walletType: WalletType) => {
     setSelectedWallet(walletType)
@@ -92,7 +96,7 @@ export const WalletSelectionDialog = ({ open, onClose }: WalletSelectionDialogPr
         </Typography>
 
         <List>
-          {(['freighter', 'albedo', 'walletconnect'] as WalletType[]).map((walletType) => {
+          {walletOptions.map((walletType) => {
             const isAvailable = availableWallets.includes(walletType)
             const isLoading = isConnecting && selectedWallet === walletType
 
@@ -149,13 +153,14 @@ export const WalletSelectionDialog = ({ open, onClose }: WalletSelectionDialogPr
             </Typography>
           </Box>
         )}
-
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography variant="caption">
-            <strong>Note:</strong> WalletConnect requires additional setup. 
-            For now, please use Freighter (browser extension) or Albedo (web-based).
-          </Typography>
-        </Alert>
+        {import.meta.env.VITE_ENABLE_WALLETCONNECT === 'true' && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="caption">
+              <strong>Note:</strong> WalletConnect requires additional setup.
+              For now, please use Freighter (browser extension) or Albedo (web-based).
+            </Typography>
+          </Alert>
+        )}
       </DialogContent>
     </Dialog>
   )

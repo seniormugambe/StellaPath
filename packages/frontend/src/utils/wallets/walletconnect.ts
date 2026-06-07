@@ -22,9 +22,7 @@ export class WalletConnectWallet {
    * Check if WalletConnect is available
    */
   static async isAvailable(): Promise<boolean> {
-    // WalletConnect is always available as it's a protocol
-    // It doesn't require a browser extension
-    return true
+    return import.meta.env.VITE_ENABLE_WALLETCONNECT === 'true'
   }
 
   /**
