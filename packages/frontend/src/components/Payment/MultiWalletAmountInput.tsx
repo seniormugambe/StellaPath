@@ -84,6 +84,13 @@ export const MultiWalletAmountInput: React.FC<MultiWalletAmountInputProps> = ({
   const [rampDialogOpen, setRampDialogOpen] = useState(false)
   const [selectedRampProvider, setSelectedRampProvider] = useState<Sep24RampProvider | null>(null)
 
+  const openWalletDialog = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    requestAnimationFrame(() => setWalletDialogOpen(true))
+  }
+
   const handleWalletSelect = () => {
     if (connected && walletType && accountId) {
       const walletSelection: SelectedWallet = {
@@ -93,7 +100,7 @@ export const MultiWalletAmountInput: React.FC<MultiWalletAmountInputProps> = ({
       }
       onSelectionChange(walletSelection)
     } else {
-      setWalletDialogOpen(true)
+      openWalletDialog()
     }
   }
 

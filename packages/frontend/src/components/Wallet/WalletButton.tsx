@@ -24,12 +24,19 @@ export const WalletButton = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
+  const openWalletDialog = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    requestAnimationFrame(() => setDialogOpen(true))
+  }
+
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     // Allow click to bubble to parent handlers where appropriate.
     if (connected) {
       setAnchorEl(event.currentTarget)
     } else {
-      setDialogOpen(true)
+      openWalletDialog()
     }
   }
 
@@ -44,7 +51,7 @@ export const WalletButton = () => {
 
   // Listen for global requests to open the wallet dialog
   useEffect(() => {
-    const handler = () => setDialogOpen(true)
+    const handler = () => openWalletDialog()
     window.addEventListener('stellarpath:wallet:open', handler)
     return () => window.removeEventListener('stellarpath:wallet:open', handler)
   }, [])
