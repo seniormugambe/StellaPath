@@ -62,7 +62,7 @@ cp .env.example .env
 
 3. Update `.env` with your configuration:
 ```env
-VITE_API_BASE_URL=http://localhost:3001
+VITE_API_BASE_URL=http://localhost:3001/api
 VITE_STELLAR_NETWORK=testnet
 VITE_STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
 ```
@@ -118,7 +118,7 @@ npm run lint:fix
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:3001` |
+| `VITE_API_BASE_URL` | Backend API base URL, including `/api` | `http://localhost:3001/api` |
 | `VITE_STELLAR_NETWORK` | Stellar network (testnet/mainnet) | `testnet` |
 | `VITE_STELLAR_HORIZON_URL` | Horizon server URL | `https://horizon-testnet.stellar.org` |
 | `VITE_SOROBAN_RPC_URL` | Soroban RPC endpoint | `https://soroban-testnet.stellar.org` |

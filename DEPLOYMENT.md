@@ -391,12 +391,13 @@ SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 SENDGRID_API_KEY=your-sendgrid-key
 FROM_EMAIL=noreply@yourapp.com
 LOG_LEVEL=info
-CORS_ORIGIN=https://your-frontend-url.onrender.com
+CORS_ORIGIN=https://stellapath.onrender.com
 ```
 
 For frontend, add:
 ```env
-VITE_API_BASE_URL=https://your-backend-url.onrender.com
+VITE_API_BASE_URL=https://stellapathbackend.onrender.com/api
+VITE_CLIENT_PORTAL_URL=https://stellapath.onrender.com/client
 ```
 
 #### 3. Connect to GitHub
@@ -680,7 +681,7 @@ npm run db:migrate:reset
 | `DATABASE_URL` connection fails | PostgreSQL not ready or wrong URL | Check Render PostgreSQL service status; copy exact URL from dashboard |
 | Health check failing (500 status) | Backend not starting | Check `PORT` env var (default `3001`); verify `DATABASE_URL` is set |
 | Migrations not running | Build command incorrect | Use exact: `npm run db:migrate:deploy --workspace=backend` |
-| Frontend can't reach backend | CORS/URL issue | Set `CORS_ORIGIN=https://frontend-url.onrender.com` on backend; `VITE_API_BASE_URL=https://backend-url.onrender.com` on frontend |
+| Frontend can't reach backend | CORS/URL issue | Set `CORS_ORIGIN=https://stellapath.onrender.com` on backend; `VITE_API_BASE_URL=https://stellapathbackend.onrender.com/api` on frontend |
 | Slow cold starts | Free plan limitations | Upgrade to paid plan or use cron jobs to prevent spinning down |
 | `JWT_SECRET` errors on deploy | Env var not set | Add `JWT_SECRET` to Render environment variables before deploy |
 

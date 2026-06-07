@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="StellaPath">
+  <rect width="64" height="64" rx="12" fill="#0f172a"/>
+  <path d="M12 39.5 51 21" fill="none" stroke="#38bdf8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M17 47 56 28.5" fill="none" stroke="#f8fafc" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="17" cy="39.5" r="4" fill="#facc15"/>
+  <circle cx="51" cy="21" r="4" fill="#facc15"/>
+</svg>
