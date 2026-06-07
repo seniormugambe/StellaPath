@@ -77,7 +77,7 @@ export class FreighterWallet {
    * Sign a message with Freighter
    * Used for authentication and proving wallet ownership
    */
-  static async signMessage(message: string): Promise<string> {
+  static async signMessage(message: string, accountId?: string): Promise<string> {
     try {
       console.log('🔐 FreighterWallet.signMessage called with message:', message)
 
@@ -92,7 +92,8 @@ export class FreighterWallet {
       // return different shapes, so normalise everything to a base64 string.
       console.log('📝 Calling Freighter signBlob...')
       // The Freighter API can return a few different types, so keep this loose.
-      const rawSignature: any = await signBlob(message)
+      const messageBlob = btoa(unescape(encodeURIComponent(message)))
+      const rawSignature: any = await signBlob(messageBlob, accountId ? { accountToSign: accountId } : undefined)
       console.log('✍️ Freighter signBlob returned:', rawSignature)
 
       if (!rawSignature) {
@@ -123,7 +124,8 @@ export class FreighterWallet {
           // Common Freighter shape: { publicKey, signature } or { signedMessage }
           const candidate =
             bufLike.signature ??
-            bufLike.signedMessage
+            bufLike.signedMessage ??
+            bufLike.signedBlob
 
           if (typeof candidate === 'string' && candidate.length > 0) {
             normalizedSignature = candidate

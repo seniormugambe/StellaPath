@@ -14,7 +14,7 @@ export interface WalletAdapter {
   isAvailable(): Promise<boolean>
   connect(): Promise<WalletConnection>
   signTransaction(request: SignatureRequest): Promise<string>
-  signMessage?(message: string): Promise<string>
+  signMessage?(message: string, accountId?: string): Promise<string>
   disconnect(): Promise<void>
 }
 
@@ -118,7 +118,8 @@ export class WalletManager {
    */
   static async signMessage(
     walletType: WalletType,
-    message: string
+    message: string,
+    accountId?: string
   ): Promise<string> {
     const wallet = this.wallets[walletType]
     
@@ -131,7 +132,7 @@ export class WalletManager {
     }
 
     try {
-      const signature = await wallet.signMessage(message)
+      const signature = await wallet.signMessage(message, accountId)
       
       if (!signature) {
         throw new Error('Message signing failed: no signature returned')

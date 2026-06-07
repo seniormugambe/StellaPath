@@ -179,7 +179,7 @@ export const useWallet = (): UseWalletReturn => {
       console.log('📝 Requesting wallet signature for authentication...')
       let signature: string
       try {
-        signature = await WalletManager.signMessage(walletType, message)
+        signature = await WalletManager.signMessage(walletType, message, walletAddress)
         console.log('✍️ Received signature:', signature)
       } catch (signError) {
         console.error('❌ Wallet message signing failed:', signError)
@@ -217,7 +217,11 @@ export const useWallet = (): UseWalletReturn => {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error('❌ Backend authentication failed:', errorData)
+        console.error('❌ Backend authentication failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorData,
+        })
         const backendMessage = typeof errorData.error === 'string'
           ? errorData.error
           : typeof errorData.error?.message === 'string'

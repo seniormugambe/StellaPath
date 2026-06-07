@@ -60,17 +60,20 @@ export const verifyWalletSignature = (
   try {
     const keypair = Keypair.fromPublicKey(publicKey);
     const signatureBuffer = Buffer.from(signature, 'base64');
+    const base64Message = Buffer.from(message, 'utf8').toString('base64');
 
-    const rawMessageBuffer = Buffer.from(message, 'utf8');
-    if (keypair.verify(rawMessageBuffer, signatureBuffer)) {
-      return true;
-    }
+    const candidatePayloads = [
+      Buffer.from(message, 'utf8'),
+      Buffer.from(base64Message, 'utf8'),
+      createHash('sha256')
+        .update(`Stellar Signed Message:\n${message}`, 'utf8')
+        .digest(),
+      createHash('sha256')
+        .update(`Stellar Signed Message:\n${base64Message}`, 'utf8')
+        .digest(),
+    ];
 
-    const freighterMessageHash = createHash('sha256')
-      .update(`Stellar Signed Message:\n${message}`, 'utf8')
-      .digest();
-
-    return keypair.verify(freighterMessageHash, signatureBuffer);
+    return candidatePayloads.some((payload) => keypair.verify(payload, signatureBuffer));
   } catch (error) {
     logger.error('Signature verification failed:', error);
     return false;
