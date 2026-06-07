@@ -3,7 +3,7 @@
  * Provides connection and transaction signing for Freighter wallet
  */
 
-import { isConnected, getPublicKey, signTransaction, getNetwork, signBlob } from '@stellar/freighter-api'
+import { isConnected, isAllowed, setAllowed, getPublicKey, signTransaction, getNetwork, signBlob } from '@stellar/freighter-api'
 import type { WalletConnection, SignatureRequest } from '../../types'
 
 export class FreighterWallet {
@@ -31,7 +31,14 @@ export class FreighterWallet {
         throw new Error('Freighter wallet is not installed. Please install the Freighter browser extension.')
       }
 
-      // Get public key (this triggers the connection prompt)
+      const allowed = await isAllowed()
+      if (!allowed) {
+        const granted = await setAllowed()
+        if (!granted) {
+          throw new Error('Freighter wallet access was not approved. Please approve access in the Freighter extension.')
+        }
+      }
+
       const publicKey = await getPublicKey()
       if (!publicKey) {
         throw new Error('Failed to get public key from Freighter')
@@ -55,6 +62,9 @@ export class FreighterWallet {
       }
     } catch (error) {
       console.error('Freighter connection failed:', error)
+      if (typeof error === 'string' && error.trim()) {
+        throw new Error(error)
+      }
       throw new Error(
         error instanceof Error 
           ? error.message 
