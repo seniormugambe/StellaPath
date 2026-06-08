@@ -5,17 +5,21 @@
  */
 
 import { Response } from 'express';
-import { EscrowRepository, TransactionRepository } from '../repositories';
+import { EscrowRepository, TransactionRepository, NotificationRepository, UserRepository } from '../repositories';
 import { EscrowService } from '../services/EscrowService';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
 import prisma from '../utils/database';
 import { EscrowStatus } from '../types/database';
+import { InvitationService } from '../services/InvitationService';
 
 const logger = createLogger();
 const escrowRepository = new EscrowRepository(prisma);
 const transactionRepository = new TransactionRepository(prisma);
+const notificationRepository = new NotificationRepository(prisma);
+const userRepository = new UserRepository(prisma);
+const invitationService = new InvitationService(notificationRepository, userRepository);
 const escrowService = new EscrowService(escrowRepository, transactionRepository, {
   networkPassphrase: process.env['STELLAR_PASSPHRASE'] || 'Test SDF Network ; September 2015',
   horizonUrl: process.env['STELLAR_HORIZON_URL'] || 'https://horizon-testnet.stellar.org',
@@ -32,6 +36,54 @@ const isEscrowParticipant = (
     escrow.recipientId === user.walletAddress
   );
 };
+
+function getFrontendUrl(): string {
+  return (process.env['FRONTEND_URL'] || 'http://localhost:3000').replace(/\/$/, '');
+}
+
+async function sendEscrowInvitation(
+  escrow: {
+    id: string;
+    contractId: string;
+    recipientId?: string | null;
+    amount: unknown;
+    expiresAt: Date;
+  },
+  creatorWalletAddress: string
+): Promise<void> {
+  try {
+    const recipientUser = await invitationService.findUserByWalletAddress(escrow.recipientId);
+    const amount = Number(escrow.amount).toFixed(7);
+    const escrowUrl = `${getFrontendUrl()}/escrow`;
+
+    await invitationService.sendInvitation({
+      target: { user: recipientUser },
+      title: 'Escrow Invitation',
+      message: `You have been invited to participate in an escrow for ${amount} XLM.`,
+      actionUrl: escrowUrl,
+      emailSubject: `Escrow invitation - ${amount} XLM`,
+      emailHtml: `
+        <p>Hello,</p>
+        <p>${creatorWalletAddress} invited you to participate in an escrow for <strong>${amount} XLM</strong>.</p>
+        <p><strong>Escrow ID:</strong> ${escrow.id}</p>
+        <p><strong>Contract:</strong> ${escrow.contractId}</p>
+        <p><strong>Expires:</strong> ${escrow.expiresAt.toLocaleString()}</p>
+        <p><a href="${escrowUrl}">Open escrow dashboard</a></p>
+      `,
+      emailText: `${creatorWalletAddress} invited you to participate in escrow ${escrow.id} for ${amount} XLM. Open it here: ${escrowUrl}`,
+      metadata: {
+        escrowId: escrow.id,
+        contractId: escrow.contractId,
+        type: 'escrow_invitation',
+      },
+    });
+  } catch (error) {
+    logger.warn('Failed to send escrow invitation', {
+      escrowId: escrow.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
 
 /**
  * Create a new escrow
@@ -75,6 +127,7 @@ export const createEscrow = asyncHandler(async (req: AuthRequest, res: Response)
 
   const escrow = result.escrow;
   logger.info(`Escrow created: ${escrow.id} (${escrow.contractId})`);
+  void sendEscrowInvitation(escrow, req.user.walletAddress);
 
   res.status(201).json({
     success: true,

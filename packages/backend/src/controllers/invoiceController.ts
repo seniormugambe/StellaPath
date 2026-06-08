@@ -5,7 +5,7 @@
  */
 
 import { Response } from 'express';
-import { InvoiceRepository, NotificationRepository, InvoiceLineItemRepository } from '../repositories';
+import { InvoiceRepository, NotificationRepository, InvoiceLineItemRepository, UserRepository } from '../repositories';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, asyncHandler } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
@@ -17,11 +17,66 @@ import {
   NotificationType
 } from '../types/database';
 import { v4 as uuidv4 } from 'uuid';
+import { InvitationService } from '../services/InvitationService';
 
 const logger = createLogger();
 const invoiceRepository = new InvoiceRepository(prisma);
 const notificationRepository = new NotificationRepository(prisma);
 const lineItemRepository = new InvoiceLineItemRepository(prisma);
+const userRepository = new UserRepository(prisma);
+const invitationService = new InvitationService(notificationRepository, userRepository);
+
+function getClientPortalUrl(): string {
+  const baseUrl =
+    process.env['CLIENT_PORTAL_URL'] ||
+    (process.env['FRONTEND_URL'] ? `${process.env['FRONTEND_URL']}/client` : 'http://localhost:3000/client');
+  return baseUrl.replace(/\/$/, '');
+}
+
+async function sendInvoiceInvitation(
+  invoice: {
+    id: string;
+    clientEmail: string;
+    totalAmount?: number;
+    amount?: number;
+    description: string;
+    dueDate: Date;
+    approvalToken: string;
+  },
+  senderName: string
+): Promise<void> {
+  try {
+    const clientUser = await invitationService.findUserByEmail(invoice.clientEmail);
+    const approvalUrl = `${getClientPortalUrl()}/invoice/${invoice.approvalToken}`;
+    const amount = Number(invoice.totalAmount ?? invoice.amount ?? 0).toFixed(7);
+
+    await invitationService.sendInvitation({
+      target: { user: clientUser, email: invoice.clientEmail },
+      title: 'Invoice Invitation',
+      message: `You have been invited to review an invoice for ${amount} XLM.`,
+      actionUrl: approvalUrl,
+      emailSubject: `Invoice invitation - ${amount} XLM`,
+      emailHtml: `
+        <p>Hello,</p>
+        <p>${senderName} invited you to review an invoice for <strong>${amount} XLM</strong>.</p>
+        <p><strong>Description:</strong> ${invoice.description}</p>
+        <p><strong>Due date:</strong> ${invoice.dueDate.toLocaleDateString()}</p>
+        <p><a href="${approvalUrl}">Review invoice</a></p>
+      `,
+      emailText: `${senderName} invited you to review an invoice for ${amount} XLM. Review it here: ${approvalUrl}`,
+      metadata: {
+        invoiceId: invoice.id,
+        approvalToken: invoice.approvalToken,
+        type: 'invoice_invitation',
+      },
+    });
+  } catch (error) {
+    logger.warn('Failed to send invoice invitation', {
+      invoiceId: invoice.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
 
 /**
  * Create a new invoice
@@ -60,6 +115,7 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
   });
 
   logger.info(`Invoice created: ${invoice.id} for ${clientEmail}`);
+  void sendInvoiceInvitation(invoice, req.user.walletAddress);
 
   res.status(201).json({
     success: true,
