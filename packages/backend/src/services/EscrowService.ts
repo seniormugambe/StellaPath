@@ -108,11 +108,12 @@ export class EscrowService {
       }
 
       const contractId = `escrow_${uuidv4()}`;
+      const recipientId = params.recipientId || params.recipientAddress;
 
       const escrow = await this.escrowRepository.create({
         contractId,
         creatorId: params.userId,
-        ...(params.recipientId ? { recipientId: params.recipientId } : {}),
+        ...(recipientId ? { recipientId } : {}),
         amount: params.amount,
         conditions: params.conditions,
         expiresAt: params.expiresAt

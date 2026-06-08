@@ -64,14 +64,15 @@ export const EscrowPage = () => {
     dispatch(setLoading(true))
     try {
       const response = await apiClient.post<{ escrow: any }>('/escrows', {
-        recipientId: formData.recipient,
+        recipientAddress: formData.recipient,
         amount: formData.amount,
         conditions: formData.conditions,
         expiresAt: new Date(formData.expiresAt).toISOString(),
       })
 
-      if (response.success && response.data?.escrow) {
-        const escrow = response.data.escrow
+      const escrow = response.data?.escrow ?? (response as typeof response & { escrow?: any }).escrow
+
+      if (response.success && escrow) {
         dispatch(
           addEscrow({
             id: escrow.id,
