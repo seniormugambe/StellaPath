@@ -16,6 +16,7 @@ import {
   PaginationOptions,
   NotificationType
 } from '../types/database';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger();
 const invoiceRepository = new InvoiceRepository(prisma);
@@ -152,13 +153,15 @@ export const getInvoices = asyncHandler(async (req: AuthRequest, res: Response) 
       id: inv.id,
       clientEmail: inv.clientEmail,
       amount: inv.amount,
+      totalAmount: inv.totalAmount ?? inv.amount,
       description: inv.description,
       status: inv.status,
       dueDate: inv.dueDate,
       createdAt: inv.createdAt,
       approvedAt: inv.approvedAt,
       executedAt: inv.executedAt,
-      txHash: inv.txHash
+      txHash: inv.txHash,
+      approvalToken: inv.approvalToken
     })),
     pagination: result.pagination
   });
@@ -460,6 +463,7 @@ export const executeInvoice = asyncHandler(async (req: AuthRequest, res: Respons
   }
 
   const { txHash } = req.body;
+  const executionTxHash = txHash || `invoice_${uuidv4()}`;
 
   if (!req.user) {
     throw new AppError('Not authenticated', 401);
@@ -484,10 +488,10 @@ export const executeInvoice = asyncHandler(async (req: AuthRequest, res: Respons
   const updatedInvoice = await invoiceRepository.updateStatus(invoiceId, {
     status: InvoiceStatus.EXECUTED,
     executedAt: new Date(),
-    txHash
+    txHash: executionTxHash
   });
 
-  logger.info(`Invoice executed: ${invoiceId} with txHash: ${txHash}`);
+  logger.info(`Invoice executed: ${invoiceId} with txHash: ${executionTxHash}`);
 
   res.json({
     success: true,

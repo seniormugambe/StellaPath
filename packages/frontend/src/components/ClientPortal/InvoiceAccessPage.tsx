@@ -36,11 +36,19 @@ export const InvoiceAccessPage = () => {
         canApprove?: boolean
         isExpired?: boolean
       }>('/invoices/validate-token', { approvalToken: trimmed })
+      const validation =
+        response.data ??
+        (response as typeof response & {
+          valid?: boolean
+          message?: string
+          canApprove?: boolean
+          isExpired?: boolean
+        })
 
-      if (response.success && response.data?.valid) {
+      if (response.success && validation.valid) {
         navigate(`/client/invoice/${trimmed}`)
       } else {
-        setError(response.data?.message || response.error || 'Invalid or expired token')
+        setError(validation.message || response.error || 'Invalid or expired token')
       }
     } catch {
       setError('Unable to validate token. Please try again.')

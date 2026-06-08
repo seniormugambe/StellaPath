@@ -28,6 +28,12 @@ const TabPanel = ({ children, value, index }: TabPanelProps) => (
   </div>
 )
 
+const normalizeInvoice = (invoice: any): InvoiceListItem => ({
+  ...invoice,
+  totalAmount: invoice.totalAmount ?? invoice.amount ?? 0,
+  status: String(invoice.status).toLowerCase() as InvoiceStatus,
+})
+
 export const InvoicePage = () => {
   const dispatch = useAppDispatch()
   const { invoices, loading, error, statusFilter } = useAppSelector((state) => state.invoice)
@@ -45,8 +51,9 @@ export const InvoicePage = () => {
     dispatch(setLoading(true))
     try {
       const response = await apiClient.get<{ invoices: InvoiceListItem[] }>('/invoices')
-      if (response.success && response.data) {
-        dispatch(setInvoices(response.data.invoices || []))
+      const invoices = response.data?.invoices ?? (response as typeof response & { invoices?: InvoiceListItem[] }).invoices
+      if (response.success && invoices) {
+        dispatch(setInvoices((invoices || []).map(normalizeInvoice)))
       } else {
         dispatch(setError(response.error || 'Failed to fetch invoices'))
       }
@@ -69,16 +76,19 @@ export const InvoicePage = () => {
         }))
       })
 
-      if (response.success && response.data?.invoice) {
-        const invoice = response.data.invoice
+      const invoice = response.data?.invoice ?? (response as typeof response & { invoice?: InvoiceListItem }).invoice
+
+      if (response.success && invoice) {
+        const normalizedInvoice = normalizeInvoice(invoice)
         dispatch(addInvoice({
-          id: invoice.id,
-          clientEmail: invoice.clientEmail,
-          totalAmount: invoice.totalAmount,
-          description: invoice.description,
-          status: invoice.status,
-          dueDate: invoice.dueDate,
-          createdAt: invoice.createdAt,
+          id: normalizedInvoice.id,
+          clientEmail: normalizedInvoice.clientEmail,
+          totalAmount: normalizedInvoice.totalAmount,
+          description: normalizedInvoice.description,
+          status: normalizedInvoice.status,
+          dueDate: normalizedInvoice.dueDate,
+          createdAt: normalizedInvoice.createdAt,
+          approvalToken: normalizedInvoice.approvalToken,
         }))
         setSuccessMessage('Invoice created successfully!')
         setActiveTab(1)
@@ -95,7 +105,7 @@ export const InvoicePage = () => {
   const handleSendInvoice = async (invoiceId: string) => {
     try {
       const response = await apiClient.patch<{ invoice: any }>(`/invoices/${invoiceId}/status`, {
-        status: 'sent',
+        status: 'SENT',
       })
 
       if (response.success) {
@@ -111,17 +121,16 @@ export const InvoicePage = () => {
 
   const handleExecuteInvoice = async (invoiceId: string) => {
     try {
-      const response = await apiClient.post<{ invoice: any }>(`/invoices/${invoiceId}/execute`, {
-        txHash: `invoice_exec_${Date.now()}`,
-      })
+      const response = await apiClient.post<{ invoice: any }>(`/invoices/${invoiceId}/execute`)
 
       if (response.success) {
+        const invoice = response.data?.invoice ?? (response as typeof response & { invoice?: any }).invoice
         dispatch(updateInvoiceInList({
           id: invoiceId,
           updates: {
             status: 'executed' as InvoiceStatus,
-            executedAt: new Date().toISOString(),
-            txHash: response.data?.invoice?.txHash,
+            executedAt: invoice?.executedAt || new Date().toISOString(),
+            txHash: invoice?.txHash,
           },
         }))
         setSuccessMessage('Invoice payment executed successfully!')

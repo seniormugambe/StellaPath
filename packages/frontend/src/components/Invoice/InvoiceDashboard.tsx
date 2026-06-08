@@ -94,8 +94,8 @@ export const InvoiceDashboard = ({
   const handleCopyApprovalLink = (invoiceId: string) => {
     const inv = invoices.find(i => i.id === invoiceId)
     if (!inv) return
-    // In a real app, the approval token would be used here
-    const link = `${CLIENT_PORTAL_URL}/invoice/${invoiceId}`
+    const token = inv.approvalToken || invoiceId
+    const link = `${CLIENT_PORTAL_URL}/invoice/${token}`
     navigator.clipboard.writeText(link).then(() => {
       setCopySuccess(true)
       setTimeout(() => setCopySuccess(false), 2000)

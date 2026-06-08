@@ -22,6 +22,17 @@ const escrowService = new EscrowService(escrowRepository, transactionRepository,
   contractId: process.env['ESCROW_CONTRACT_ID'] || 'local-escrow-service'
 });
 
+const isEscrowParticipant = (
+  escrow: { creatorId: string; recipientId?: string | null },
+  user: { id: string; walletAddress: string }
+): boolean => {
+  return (
+    escrow.creatorId === user.id ||
+    escrow.recipientId === user.id ||
+    escrow.recipientId === user.walletAddress
+  );
+};
+
 /**
  * Create a new escrow
  * POST /api/escrows
@@ -95,9 +106,7 @@ export const getEscrow = asyncHandler(async (req: AuthRequest, res: Response) =>
     throw new AppError('Escrow not found', 404);
   }
 
-  // Verify user has access to this escrow
-  const userId = req.user?.id;
-  if (userId && escrow.creatorId !== userId && escrow.recipientId !== userId) {
+  if (req.user && !isEscrowParticipant(escrow, req.user)) {
     throw new AppError('Unauthorized to access this escrow', 403);
   }
 
@@ -133,9 +142,7 @@ export const getEscrowByContractId = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError('Escrow not found', 404);
   }
 
-  // Verify user has access to this escrow
-  const userId = req.user?.id;
-  if (userId && escrow.creatorId !== userId && escrow.recipientId !== userId) {
+  if (req.user && !isEscrowParticipant(escrow, req.user)) {
     throw new AppError('Unauthorized to access this escrow', 403);
   }
 
@@ -169,7 +176,13 @@ export const getEscrows = asyncHandler(async (req: AuthRequest, res: Response) =
   
   let escrows;
   if (role === 'recipient') {
-    escrows = await escrowRepository.findByRecipientId(req.user.id);
+    const [byUserId, byWalletAddress] = await Promise.all([
+      escrowRepository.findByRecipientId(req.user.id),
+      escrowRepository.findByRecipientId(req.user.walletAddress),
+    ]);
+    escrows = Array.from(
+      new Map([...byUserId, ...byWalletAddress].map(escrow => [escrow.id, escrow])).values()
+    );
   } else {
     // Default to creator role
     escrows = await escrowRepository.findByCreatorId(req.user.id);
@@ -204,7 +217,7 @@ export const getActiveEscrows = asyncHandler(async (req: AuthRequest, res: Respo
   
   // Filter to only user's escrows (as creator or recipient)
   const userEscrows = allActive.filter(
-    escrow => escrow.creatorId === req.user!.id || escrow.recipientId === req.user!.id
+    escrow => isEscrowParticipant(escrow, req.user!)
   );
 
   res.json({
@@ -237,9 +250,7 @@ export const checkEscrowConditions = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError('Escrow not found', 404);
   }
 
-  // Verify user has access to this escrow
-  const userId = req.user?.id;
-  if (userId && escrow.creatorId !== userId && escrow.recipientId !== userId) {
+  if (req.user && !isEscrowParticipant(escrow, req.user)) {
     throw new AppError('Unauthorized to access this escrow', 403);
   }
 

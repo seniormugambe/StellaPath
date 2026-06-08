@@ -50,8 +50,9 @@ export const EscrowPage = () => {
     dispatch(setLoading(true))
     try {
       const response = await apiClient.get<{ escrows: EscrowListItem[] }>('/escrows')
-      if (response.success && response.data) {
-        dispatch(setEscrows(response.data.escrows || []))
+      const escrows = response.data?.escrows ?? (response as typeof response & { escrows?: EscrowListItem[] }).escrows
+      if (response.success && escrows) {
+        dispatch(setEscrows(escrows || []))
       } else {
         dispatch(setError(response.error || 'Failed to fetch escrows'))
       }
@@ -107,11 +108,16 @@ export const EscrowPage = () => {
         ),
       ])
 
-      if (escrowRes.success && escrowRes.data) {
-        dispatch(setSelectedEscrow(escrowRes.data.escrow))
+      const escrow = escrowRes.data?.escrow ?? (escrowRes as typeof escrowRes & { escrow?: EscrowDetail }).escrow
+      const conditions =
+        conditionsRes.data?.conditions ??
+        (conditionsRes as typeof conditionsRes & { conditions?: ConditionStatusItem[] }).conditions
+
+      if (escrowRes.success && escrow) {
+        dispatch(setSelectedEscrow(escrow))
       }
-      if (conditionsRes.success && conditionsRes.data) {
-        dispatch(setConditionStatuses(conditionsRes.data.conditions || []))
+      if (conditionsRes.success && conditions) {
+        dispatch(setConditionStatuses(conditions || []))
       }
     } catch {
       dispatch(setError('Failed to load escrow details'))
@@ -122,9 +128,7 @@ export const EscrowPage = () => {
 
   const handleRelease = async (escrowId: string) => {
     try {
-      const response = await apiClient.post<{ escrow: any }>(`/escrows/${escrowId}/release`, {
-        txHash: `release_${Date.now()}`,
-      })
+      const response = await apiClient.post<{ escrow: any }>(`/escrows/${escrowId}/release`)
 
       if (response.success) {
         dispatch(updateEscrowInList({ id: escrowId, updates: { status: 'released' as EscrowStatus } }))
@@ -139,9 +143,7 @@ export const EscrowPage = () => {
 
   const handleRefund = async (escrowId: string) => {
     try {
-      const response = await apiClient.post<{ escrow: any }>(`/escrows/${escrowId}/refund`, {
-        txHash: `refund_${Date.now()}`,
-      })
+      const response = await apiClient.post<{ escrow: any }>(`/escrows/${escrowId}/refund`)
 
       if (response.success) {
         dispatch(updateEscrowInList({ id: escrowId, updates: { status: 'refunded' as EscrowStatus } }))

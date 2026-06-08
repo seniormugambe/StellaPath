@@ -12,6 +12,7 @@ export interface InvoiceListItem {
   approvedAt?: string
   executedAt?: string
   txHash?: string
+  approvalToken?: string
 }
 
 export interface InvoiceStats {

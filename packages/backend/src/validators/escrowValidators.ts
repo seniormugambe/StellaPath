@@ -28,11 +28,11 @@ export const createEscrowSchema = z.object({
 );
 
 export const releaseEscrowSchema = z.object({
-  txHash: z.string().length(64, 'Transaction hash must be 64 characters')
+  txHash: z.string().length(64, 'Transaction hash must be 64 characters').optional()
 });
 
 export const refundEscrowSchema = z.object({
-  txHash: z.string().length(64, 'Transaction hash must be 64 characters')
+  txHash: z.string().length(64, 'Transaction hash must be 64 characters').optional()
 });
 
 export const updateEscrowStatusSchema = z.object({

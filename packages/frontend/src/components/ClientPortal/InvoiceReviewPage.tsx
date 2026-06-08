@@ -63,6 +63,11 @@ const getStatusColor = (status: InvoiceStatus): 'success' | 'warning' | 'error' 
 const approvalSteps = ['Review Invoice', 'Provide Details', 'Confirm']
 const rejectionSteps = ['Review Invoice', 'Provide Reason', 'Confirm']
 
+const normalizePublicInvoice = (invoice: PublicInvoice): PublicInvoice => ({
+  ...invoice,
+  status: String(invoice.status).toLowerCase() as InvoiceStatus,
+})
+
 export const InvoiceReviewPage = () => {
   const { approvalToken } = useParams<{ approvalToken: string }>()
   const navigate = useNavigate()
@@ -99,8 +104,9 @@ export const InvoiceReviewPage = () => {
       const response = await apiClient.get<{ invoice: PublicInvoice }>(
         `/invoices/public/${approvalToken}`
       )
-      if (response.success && response.data?.invoice) {
-        setInvoice(response.data.invoice)
+      const invoice = response.data?.invoice ?? (response as typeof response & { invoice?: PublicInvoice }).invoice
+      if (response.success && invoice) {
+        setInvoice(normalizePublicInvoice(invoice))
       } else {
         setError(response.error || 'Invoice not found or token is invalid')
       }

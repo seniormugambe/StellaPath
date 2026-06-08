@@ -47,7 +47,7 @@ export const rejectInvoiceSchema = z.object({
 });
 
 export const executeInvoiceSchema = z.object({
-  txHash: z.string().length(64, 'Transaction hash must be 64 characters')
+  txHash: z.string().length(64, 'Transaction hash must be 64 characters').optional()
 });
 
 export const validateTokenSchema = z.object({
