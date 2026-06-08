@@ -4,8 +4,9 @@
 
 export {
   EmailConfig,
+  EmailClient,
   getEmailConfig,
-  createEmailTransporter,
+  createEmailClient,
   sendEmail,
   SendEmailOptions,
   SendEmailResult,

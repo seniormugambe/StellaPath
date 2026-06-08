@@ -5,6 +5,8 @@
  * Validates: Requirements 3.3, 4.2, 4.4
  */
 
+/// <reference types="jest" />
+
 import { NotificationType } from '../types/database';
 import {
   interpolateTemplate,
@@ -15,7 +17,7 @@ import {
 } from '../config/notificationTemplates';
 import {
   getEmailConfig,
-  createEmailTransporter,
+  createEmailClient,
   sendEmail,
   EmailConfig,
 } from '../config/email';
@@ -236,102 +238,87 @@ describe('Email Configuration', () => {
 
   describe('getEmailConfig', () => {
     it('should return default config when no env vars are set', () => {
-      delete process.env['EMAIL_PROVIDER'];
       delete process.env['EMAIL_FROM'];
       delete process.env['EMAIL_FROM_NAME'];
+      delete process.env['FROM_EMAIL'];
+      delete process.env['FROM_NAME'];
+      delete process.env['RESEND_API_KEY'];
+      delete process.env['RESEND_API_URL'];
 
       const config = getEmailConfig();
 
-      expect(config.provider).toBe('smtp');
+      expect(config.provider).toBe('resend');
       expect(config.from).toBe('noreply@stellar-dapp.com');
       expect(config.fromName).toBe('Stellar DApp');
-      expect(config.smtpHost).toBe('localhost');
-      expect(config.smtpPort).toBe(587);
+      expect(config.resendApiKey).toBeUndefined();
+      expect(config.resendApiUrl).toBe('https://api.resend.com/emails');
     });
 
     it('should use env vars when set', () => {
-      process.env['EMAIL_PROVIDER'] = 'sendgrid';
       process.env['EMAIL_FROM'] = 'test@example.com';
       process.env['EMAIL_FROM_NAME'] = 'Test App';
-      process.env['SENDGRID_API_KEY'] = 'SG.test-key';
+      process.env['RESEND_API_KEY'] = 're_test-key';
+      process.env['RESEND_API_URL'] = 'https://api.resend.test/emails';
 
       const config = getEmailConfig();
 
-      expect(config.provider).toBe('sendgrid');
+      expect(config.provider).toBe('resend');
       expect(config.from).toBe('test@example.com');
       expect(config.fromName).toBe('Test App');
-      expect(config.sendgridApiKey).toBe('SG.test-key');
+      expect(config.resendApiKey).toBe('re_test-key');
+      expect(config.resendApiUrl).toBe('https://api.resend.test/emails');
     });
 
-    it('should parse SMTP port correctly', () => {
-      process.env['SMTP_PORT'] = '465';
-      process.env['SMTP_SECURE'] = 'true';
+    it('should support legacy FROM_* aliases', () => {
+      process.env['FROM_EMAIL'] = 'legacy@example.com';
+      process.env['FROM_NAME'] = 'Legacy App';
 
       const config = getEmailConfig();
 
-      expect(config.smtpPort).toBe(465);
-      expect(config.smtpSecure).toBe(true);
+      expect(config.from).toBe('legacy@example.com');
+      expect(config.fromName).toBe('Legacy App');
     });
   });
 
-  describe('createEmailTransporter', () => {
-    it('should create a SendGrid transporter when configured', () => {
+  describe('createEmailClient', () => {
+    it('should create a Resend email client', () => {
       const config: EmailConfig = {
-        provider: 'sendgrid',
+        provider: 'resend',
         from: 'test@example.com',
         fromName: 'Test',
-        sendgridApiKey: 'SG.test-key',
+        resendApiKey: 're_test-key',
+        resendApiUrl: 'https://api.resend.test/emails',
       };
 
-      const transporter = createEmailTransporter(config);
-      expect(transporter).toBeDefined();
-      expect(transporter.transporter).toBeDefined();
-    });
-
-    it('should create an SMTP transporter when configured', () => {
-      const config: EmailConfig = {
-        provider: 'smtp',
-        from: 'test@example.com',
-        fromName: 'Test',
-        smtpHost: 'smtp.example.com',
-        smtpPort: 587,
-        smtpSecure: false,
-        smtpUser: 'user',
-        smtpPass: 'pass',
-      };
-
-      const transporter = createEmailTransporter(config);
-      expect(transporter).toBeDefined();
-    });
-
-    it('should create SMTP transporter without auth when no user provided', () => {
-      const config: EmailConfig = {
-        provider: 'smtp',
-        from: 'test@example.com',
-        fromName: 'Test',
-        smtpHost: 'localhost',
-        smtpPort: 25,
-      };
-
-      const transporter = createEmailTransporter(config);
-      expect(transporter).toBeDefined();
+      const client = createEmailClient(config);
+      expect(client).toBeDefined();
+      expect(client.send).toEqual(expect.any(Function));
     });
   });
 
   describe('sendEmail', () => {
+    let fetchSpy: jest.SpyInstance;
+
+    afterEach(() => {
+      fetchSpy?.mockRestore();
+    });
+
     it('should return success when email is sent', async () => {
-      const mockTransporter = {
-        sendMail: jest.fn().mockResolvedValue({ messageId: 'msg-123' }),
-      } as any;
+      fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({ id: 'email-123' }),
+      } as any);
 
       const config: EmailConfig = {
-        provider: 'smtp',
+        provider: 'resend',
         from: 'test@example.com',
         fromName: 'Test',
+        resendApiKey: 're_test-key',
+        resendApiUrl: 'https://api.resend.test/emails',
       };
 
       const result = await sendEmail(
-        mockTransporter,
         {
           to: 'recipient@example.com',
           subject: 'Test Subject',
@@ -341,30 +328,41 @@ describe('Email Configuration', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.messageId).toBe('msg-123');
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect(result.messageId).toBe('email-123');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.resend.test/emails',
         expect.objectContaining({
-          from: '"Test" <test@example.com>',
-          to: 'recipient@example.com',
-          subject: 'Test Subject',
-          html: '<p>Test</p>',
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer re_test-key',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify({
+            from: '"Test" <test@example.com>',
+            to: 'recipient@example.com',
+            subject: 'Test Subject',
+            html: '<p>Test</p>',
+          }),
         })
       );
     });
 
     it('should return error when email sending fails', async () => {
-      const mockTransporter = {
-        sendMail: jest.fn().mockRejectedValue(new Error('SMTP connection failed')),
-      } as any;
+      fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: jest.fn().mockResolvedValue({ message: 'Invalid sender' }),
+      } as any);
 
       const config: EmailConfig = {
-        provider: 'smtp',
+        provider: 'resend',
         from: 'test@example.com',
         fromName: 'Test',
+        resendApiKey: 're_test-key',
+        resendApiUrl: 'https://api.resend.test/emails',
       };
 
       const result = await sendEmail(
-        mockTransporter,
         {
           to: 'recipient@example.com',
           subject: 'Test Subject',
@@ -374,7 +372,28 @@ describe('Email Configuration', () => {
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('SMTP connection failed');
+      expect(result.error).toBe('Invalid sender');
+    });
+
+    it('should return error when RESEND_API_KEY is missing', async () => {
+      const config: EmailConfig = {
+        provider: 'resend',
+        from: 'test@example.com',
+        fromName: 'Test',
+        resendApiUrl: 'https://api.resend.test/emails',
+      };
+
+      const result = await sendEmail(
+        {
+          to: 'recipient@example.com',
+          subject: 'Test Subject',
+          html: '<p>Test</p>',
+        },
+        config
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('RESEND_API_KEY is not configured');
     });
   });
 });

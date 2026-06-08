@@ -1,81 +1,28 @@
 /**
  * Email service configuration
- * 
- * Supports both SendGrid (via API key) and generic SMTP (via Nodemailer).
- * Configuration is driven by environment variables.
+ *
+ * Sends email through the Resend API. Configuration is driven by environment
+ * variables, with legacy FROM_* aliases supported for existing deployments.
  */
 
-import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
 export interface EmailConfig {
-  provider: 'sendgrid' | 'smtp';
+  provider: 'resend';
   from: string;
   fromName: string;
-  // SendGrid-specific
-  sendgridApiKey?: string | undefined;
-  // SMTP-specific
-  smtpHost?: string | undefined;
-  smtpPort?: number | undefined;
-  smtpSecure?: boolean | undefined;
-  smtpUser?: string | undefined;
-  smtpPass?: string | undefined;
+  resendApiKey?: string | undefined;
+  resendApiUrl: string;
 }
 
 export function getEmailConfig(): EmailConfig {
-  const provider = (process.env['EMAIL_PROVIDER'] || 'smtp') as 'sendgrid' | 'smtp';
-
   return {
-    provider,
-    from: process.env['EMAIL_FROM'] || 'noreply@stellar-dapp.com',
-    fromName: process.env['EMAIL_FROM_NAME'] || 'Stellar DApp',
-    sendgridApiKey: process.env['SENDGRID_API_KEY'],
-    smtpHost: process.env['SMTP_HOST'] || 'localhost',
-    smtpPort: parseInt(process.env['SMTP_PORT'] || '587', 10),
-    smtpSecure: process.env['SMTP_SECURE'] === 'true',
-    smtpUser: process.env['SMTP_USER'],
-    smtpPass: process.env['SMTP_PASS'],
+    provider: 'resend',
+    from: process.env['EMAIL_FROM'] || process.env['FROM_EMAIL'] || 'noreply@stellar-dapp.com',
+    fromName: process.env['EMAIL_FROM_NAME'] || process.env['FROM_NAME'] || 'Stellar DApp',
+    resendApiKey: process.env['RESEND_API_KEY'],
+    resendApiUrl: process.env['RESEND_API_URL'] || 'https://api.resend.com/emails',
   };
-}
-
-/**
- * Creates a Nodemailer transporter based on the email configuration.
- * 
- * - For SendGrid: uses SMTP relay with API key as password.
- * - For generic SMTP: uses the provided host/port/credentials.
- */
-export function createEmailTransporter(config?: EmailConfig): nodemailer.Transporter {
-  const emailConfig = config || getEmailConfig();
-
-  if (emailConfig.provider === 'sendgrid' && emailConfig.sendgridApiKey) {
-    logger.info('Configuring email transport with SendGrid');
-    return nodemailer.createTransport({
-      host: 'smtp.sendgrid.net',
-      port: 587,
-      secure: false,
-      auth: {
-        user: 'apikey',
-        pass: emailConfig.sendgridApiKey,
-      },
-    });
-  }
-
-  logger.info('Configuring email transport with SMTP', {
-    host: emailConfig.smtpHost,
-    port: emailConfig.smtpPort,
-  });
-
-  return nodemailer.createTransport({
-    host: emailConfig.smtpHost,
-    port: emailConfig.smtpPort,
-    secure: emailConfig.smtpSecure,
-    auth: emailConfig.smtpUser
-      ? {
-          user: emailConfig.smtpUser,
-          pass: emailConfig.smtpPass,
-        }
-      : undefined,
-  });
 }
 
 export interface SendEmailOptions {
@@ -91,35 +38,87 @@ export interface SendEmailResult {
   error?: string;
 }
 
+export interface EmailClient {
+  send(options: SendEmailOptions, config?: EmailConfig): Promise<SendEmailResult>;
+}
+
 /**
- * Sends an email using the provided transporter.
+ * Creates an email client backed by the Resend REST API.
+ */
+export function createEmailClient(config?: EmailConfig): EmailClient {
+  const emailConfig = config || getEmailConfig();
+
+  logger.info('Configuring email client with Resend', {
+    apiUrl: emailConfig.resendApiUrl,
+    from: emailConfig.from,
+  });
+
+  return {
+    send: (options: SendEmailOptions, overrideConfig?: EmailConfig) =>
+      sendEmail(options, overrideConfig || emailConfig),
+  };
+}
+
+/**
+ * Sends an email through the Resend API.
  */
 export async function sendEmail(
-  transporter: nodemailer.Transporter,
   options: SendEmailOptions,
   config?: EmailConfig
 ): Promise<SendEmailResult> {
   const emailConfig = config || getEmailConfig();
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"${emailConfig.fromName}" <${emailConfig.from}>`,
+  if (!emailConfig.resendApiKey) {
+    const error = 'RESEND_API_KEY is not configured';
+    logger.error('Failed to send email', {
       to: options.to,
       subject: options.subject,
-      html: options.html,
-      text: options.text,
+      error,
     });
+    return { success: false, error };
+  }
+
+  try {
+    const response = await fetch(emailConfig.resendApiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${emailConfig.resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `"${emailConfig.fromName}" <${emailConfig.from}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      }),
+    });
+
+    const responseBody = await response.json().catch(() => ({})) as {
+      id?: string;
+      message?: string;
+      error?: string | { message?: string };
+    };
+
+    if (!response.ok) {
+      const responseError =
+        typeof responseBody.error === 'string'
+          ? responseBody.error
+          : responseBody.error?.message || responseBody.message || `Resend API returned ${response.status}`;
+      throw new Error(responseError);
+    }
 
     logger.info('Email sent successfully', {
-      messageId: info.messageId,
+      messageId: responseBody.id,
       to: options.to,
       subject: options.subject,
     });
 
-    return {
-      success: true,
-      messageId: info.messageId,
-    };
+    const result: SendEmailResult = { success: true };
+    if (responseBody.id) {
+      result.messageId = responseBody.id;
+    }
+    return result;
   } catch (error) {
     logger.error('Failed to send email', {
       to: options.to,

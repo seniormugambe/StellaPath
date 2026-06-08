@@ -12,7 +12,6 @@
  */
 
 import Bull from 'bull';
-import nodemailer from 'nodemailer';
 import { NotificationRepository } from '../repositories/NotificationRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import {
@@ -26,9 +25,9 @@ import {
   TemplateData,
 } from '../config/notificationTemplates';
 import {
-  sendEmail,
   SendEmailResult,
   EmailConfig,
+  EmailClient,
   getEmailConfig,
 } from '../config/email';
 import {
@@ -82,7 +81,7 @@ export class NotificationService {
   constructor(
     private notificationRepository: NotificationRepository,
     private userRepository: UserRepository,
-    private emailTransporter: nodemailer.Transporter,
+    private emailClient: EmailClient,
     private notificationQueue: Bull.Queue<NotificationJobData>,
     config?: NotificationServiceConfig
   ) {
@@ -150,8 +149,7 @@ export class NotificationService {
       const recipientEmail = data.email || user.email;
 
       if (recipientEmail && this.isEmailEnabled(user)) {
-        emailResult = await sendEmail(
-          this.emailTransporter,
+        emailResult = await this.emailClient.send(
           {
             to: recipientEmail,
             subject: rendered.subject,

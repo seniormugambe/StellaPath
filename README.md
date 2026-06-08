@@ -5,12 +5,12 @@ A comprehensive transaction management system built on the Stellar blockchain, p
 ## 🌟 Features
 
 - **Basic Transactions**: Send and receive payments on the Stellar network
-- **Escrow Services**: Conditional payments with automated release mechanisms
+- **Escrow Services**: Conditional payment workflows with smart-contract custody planned
 - **P2P Payments**: Direct peer-to-peer transfers with minimal overhead
 - **Invoice Management**: Create, send, and manage invoices with approval workflows
 - **X402 Protocol**: AI agent payments and micropayments for the agent economy
-- **Smart Contract Security**: Built-in validation, reentrancy protection, and audit trails
-- **Wallet Integration**: Support for Freighter, Albedo, and WalletConnect
+- **Smart Contract Security**: Contract validation and property tests, with backend audit trails
+- **Wallet Integration**: Support for Freighter and Albedo; WalletConnect scaffolding is present but disabled until fully configured
 
 ## 🏗️ Architecture
 
@@ -117,7 +117,7 @@ This will:
 - `REDIS_URL` - Redis connection string
 - `STELLAR_NETWORK` - Stellar network (testnet/mainnet)
 - `SOROBAN_RPC_URL` - Soroban RPC endpoint
-- `SENDGRID_API_KEY` - Email service API key
+- `RESEND_API_KEY` - Resend API key for notification emails
 
 #### Frontend Configuration
 - `VITE_API_BASE_URL` - Backend API URL
@@ -158,10 +158,29 @@ Once the backend is running, API documentation is available at:
 - Swagger UI: http://localhost:3001/api/docs
 - OpenAPI JSON: http://localhost:3001/api/docs.json
 
+## 🔒 Escrow Trust Model
+
+The intended escrow model is trust-minimized: user funds should be controlled by a Stellar/Soroban smart contract, not by the backend server. In the complete flow, a user signs a wallet transaction that transfers funds into an escrow contract. The contract then releases funds to the recipient only when the configured conditions are met, or refunds them to the sender when the escrow expires.
+
+Current implementation status:
+
+- The backend creates escrow records, stores conditions, evaluates release/refund eligibility, records transaction hashes, and provides audit/history data.
+- The Soroban contract package includes escrow state, condition checks, release/refund status transitions, and property-based tests.
+- The current escrow contract code still marks actual token transfers as a planned integration step with comments such as “in real implementation, this would transfer funds to contract.”
+
+Because of that, the current escrow workflow should be treated as orchestration and tracking until the contract token-transfer path is fully wired into the frontend and backend. A production-grade trustless escrow release requires:
+
+- Wallet-signed funding transaction from the sender.
+- On-chain transfer of funds into the escrow contract.
+- On-chain release/refund transaction after conditions or expiry are verified.
+- Backend status updates only after confirmed on-chain transaction hashes.
+
+Until those pieces are connected and deployed, users should not assume funds are actually locked by the escrow contract.
+
 ## 🔐 Security
 
 The system implements multiple security layers:
-- Smart contract validation and reentrancy protection
+- Smart contract validation and property-based tests
 - JWT-based authentication with wallet signatures
 - Input validation and sanitization
 - Rate limiting and CORS protection
@@ -205,6 +224,7 @@ For support and questions:
 - [x] X402 protocol integration for AI agent payments
 - [ ] MCP integration for AI agent discovery
 - [ ] Multi-signature wallet support
+- [ ] Wire escrow funding, release, and refund to on-chain Soroban token transfers
 - [ ] Advanced escrow conditions (oracles, time locks)
 - [ ] Mobile application
 - [ ] Integration with additional Stellar wallets

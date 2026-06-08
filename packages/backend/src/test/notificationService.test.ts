@@ -7,6 +7,8 @@
  * Validates: Requirements 3.3, 4.2, 4.4
  */
 
+/// <reference types="jest" />
+
 import { NotificationType } from '../types/database';
 import type { User, NotificationRecord } from '../types/database';
 import { NotificationService } from '../services/NotificationService';
@@ -88,9 +90,9 @@ function createMockUserRepository() {
   };
 }
 
-function createMockTransporter() {
+function createMockEmailClient() {
   return {
-    sendMail: jest.fn().mockResolvedValue({ messageId: 'msg-001' }),
+    send: jest.fn().mockResolvedValue({ success: true, messageId: 'msg-001' }),
   } as any;
 }
 
@@ -109,26 +111,28 @@ describe('NotificationService', () => {
   let service: NotificationService;
   let mockNotifRepo: ReturnType<typeof createMockNotificationRepository>;
   let mockUserRepo: ReturnType<typeof createMockUserRepository>;
-  let mockTransporter: ReturnType<typeof createMockTransporter>;
+  let mockEmailClient: ReturnType<typeof createMockEmailClient>;
   let mockQueue: ReturnType<typeof createMockQueue>;
 
   const emailConfig = {
-    provider: 'smtp' as const,
+    provider: 'resend' as const,
     from: 'test@stellar-dapp.com',
     fromName: 'Stellar DApp',
+    resendApiKey: 're_test-key',
+    resendApiUrl: 'https://api.resend.com/emails',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockNotifRepo = createMockNotificationRepository();
     mockUserRepo = createMockUserRepository();
-    mockTransporter = createMockTransporter();
+    mockEmailClient = createMockEmailClient();
     mockQueue = createMockQueue();
 
     service = new NotificationService(
       mockNotifRepo as any,
       mockUserRepo as any,
-      mockTransporter,
+      mockEmailClient,
       mockQueue,
       { emailConfig }
     );
@@ -179,10 +183,11 @@ describe('NotificationService', () => {
           type: NotificationType.INVOICE_RECEIVED,
         })
       );
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect(mockEmailClient.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'client@example.com',
-        })
+        }),
+        emailConfig
       );
       expect(result.emailResult).toBeDefined();
       expect(result.emailResult!.success).toBe(true);
@@ -193,10 +198,11 @@ describe('NotificationService', () => {
       const dataWithoutEmail = { ...rest };
       await service.processNotificationJob(dataWithoutEmail);
 
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect(mockEmailClient.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'alice@example.com',
-        })
+        }),
+        emailConfig
       );
     });
 
@@ -210,7 +216,7 @@ describe('NotificationService', () => {
       const result = await service.processNotificationJob(dataWithoutEmail);
 
       expect(result.success).toBe(true);
-      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+      expect(mockEmailClient.send).not.toHaveBeenCalled();
       expect(result.emailResult).toBeUndefined();
     });
 
@@ -241,7 +247,7 @@ describe('NotificationService', () => {
       expect(result.success).toBe(true);
       expect(result.notificationId).toBeUndefined();
       expect(mockNotifRepo.create).not.toHaveBeenCalled();
-      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+      expect(mockEmailClient.send).not.toHaveBeenCalled();
     });
 
     it('should skip email when user has emailNotifications disabled', async () => {
@@ -263,7 +269,7 @@ describe('NotificationService', () => {
       // In-app notification should still be created
       expect(mockNotifRepo.create).toHaveBeenCalled();
       // But email should not be sent
-      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+      expect(mockEmailClient.send).not.toHaveBeenCalled();
     });
 
     it('should handle repository errors gracefully', async () => {
@@ -276,7 +282,7 @@ describe('NotificationService', () => {
     });
 
     it('should still succeed when email sending fails', async () => {
-      mockTransporter.sendMail.mockRejectedValue(new Error('SMTP error'));
+      mockEmailClient.send.mockResolvedValue({ success: false, error: 'Resend API error' });
 
       const result = await service.processNotificationJob(jobData);
 

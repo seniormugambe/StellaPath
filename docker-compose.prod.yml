@@ -76,9 +76,9 @@ services:
       STELLAR_PASSPHRASE: ${STELLAR_PASSPHRASE:-Test SDF Network ; September 2015}
       SOROBAN_RPC_URL: ${SOROBAN_RPC_URL:-https://soroban-testnet.stellar.org}
       SOROBAN_NETWORK_PASSPHRASE: ${SOROBAN_NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      FROM_EMAIL: ${FROM_EMAIL:-noreply@stellar-dapp.com}
-      FROM_NAME: ${FROM_NAME:-Stellar DApp}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@stellar-dapp.com}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Stellar DApp}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       CLIENT_PORTAL_URL: ${CLIENT_PORTAL_URL:-http://localhost/client}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}

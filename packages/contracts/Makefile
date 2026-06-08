@@ -4,9 +4,9 @@
 .DEFAULT_GOAL := help
 
 # Variables
-CONTRACT_NAME = stellar-dapp-contracts
+CONTRACT_NAME = stellar_dapp_contracts
 NETWORK = testnet
-WASM_TARGET = wasm32-unknown-unknown
+WASM_TARGET = wasm32v1-none
 
 # Help target
 help: ## Show this help message
@@ -17,8 +17,8 @@ help: ## Show this help message
 install: ## Install dependencies and setup environment
 	@echo "Installing Rust dependencies..."
 	cargo fetch
-	@echo "Installing Soroban CLI..."
-	cargo install --locked soroban-cli --features opt
+	@echo "Installing Stellar CLI..."
+	cargo install --locked stellar-cli --features opt
 	@echo "Adding wasm32 target..."
 	rustup target add $(WASM_TARGET)
 
@@ -27,7 +27,7 @@ build: ## Build the smart contract
 	@echo "Building smart contract..."
 	cargo build --target $(WASM_TARGET) --release
 	@echo "Optimizing WASM..."
-	soroban contract optimize --wasm target/$(WASM_TARGET)/release/$(CONTRACT_NAME).wasm
+	stellar contract optimize --wasm target/$(WASM_TARGET)/release/$(CONTRACT_NAME).wasm
 
 build-dev: ## Build for development (with debug info)
 	@echo "Building smart contract for development..."
@@ -49,7 +49,7 @@ test-property: ## Run property-based tests
 # Deployment
 deploy-testnet: build ## Deploy to Stellar testnet
 	@echo "Deploying to testnet..."
-	soroban contract deploy \
+	stellar contract deploy \
 		--wasm target/$(WASM_TARGET)/release/$(CONTRACT_NAME).wasm \
 		--source-account $(DEPLOYER_SECRET_KEY) \
 		--network $(NETWORK)
@@ -57,14 +57,14 @@ deploy-testnet: build ## Deploy to Stellar testnet
 deploy-mainnet: build ## Deploy to Stellar mainnet (use with caution)
 	@echo "Deploying to mainnet..."
 	@read -p "Are you sure you want to deploy to mainnet? [y/N] " confirm && [ "$$confirm" = "y" ]
-	soroban contract deploy \
+	stellar contract deploy \
 		--wasm target/$(WASM_TARGET)/release/$(CONTRACT_NAME).wasm \
 		--source-account $(DEPLOYER_SECRET_KEY) \
 		--network mainnet
 
 # Contract interaction
 invoke: ## Invoke a contract function (usage: make invoke FUNCTION=function_name ARGS="--arg1 value1")
-	soroban contract invoke \
+	stellar contract invoke \
 		--id $(CONTRACT_ID) \
 		--source-account $(DEPLOYER_SECRET_KEY) \
 		--network $(NETWORK) \
@@ -91,14 +91,14 @@ check: ## Check code without building
 # Network setup
 setup-testnet: ## Setup testnet configuration
 	@echo "Setting up testnet configuration..."
-	soroban config network add \
+	stellar network add \
 		--global testnet \
 		--rpc-url https://soroban-testnet.stellar.org:443 \
 		--network-passphrase "Test SDF Network ; September 2015"
 
 setup-mainnet: ## Setup mainnet configuration
 	@echo "Setting up mainnet configuration..."
-	soroban config network add \
+	stellar network add \
 		--global mainnet \
 		--rpc-url https://soroban-mainnet.stellar.org:443 \
 		--network-passphrase "Public Global Stellar Network ; September 2015"
@@ -106,8 +106,8 @@ setup-mainnet: ## Setup mainnet configuration
 # Account management
 create-account: ## Create a new Stellar account for testing
 	@echo "Creating new test account..."
-	soroban config identity generate --global test-account
-	soroban config identity fund test-account --network testnet
+	stellar keys generate --global test-account
+	stellar keys fund test-account --network testnet
 
 # Documentation
 docs: ## Generate documentation

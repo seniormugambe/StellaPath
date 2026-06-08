@@ -71,8 +71,9 @@ ESCROW_CONTRACT_ADDRESS=CABC...
 INVOICE_CONTRACT_ADDRESS=CABC...
 
 # Email (optional, for invoice/notification emails)
-SENDGRID_API_KEY=SG.your_key_here
-FROM_EMAIL=noreply@your-domain.com
+RESEND_API_KEY=re_your_key_here
+EMAIL_FROM=noreply@your-domain.com
+EMAIL_FROM_NAME=StellaPath
 ```
 
 **Frontend production config:**
@@ -389,8 +390,9 @@ SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 
 **Optional (if using backend features):**
 ```env
-SENDGRID_API_KEY=your-sendgrid-key
-FROM_EMAIL=noreply@yourapp.com
+RESEND_API_KEY=your-resend-key
+EMAIL_FROM=noreply@yourapp.com
+EMAIL_FROM_NAME=StellaPath
 LOG_LEVEL=info
 CORS_ORIGIN=https://stellapath.onrender.com
 ```
@@ -497,9 +499,9 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SENDGRID_API_KEY` | — | SendGrid API key (optional) |
-| `FROM_EMAIL` | `noreply@stellar-dapp.com` | Sender email address |
-| `FROM_NAME` | `Stellar DApp` | Sender display name |
+| `RESEND_API_KEY` | — | Resend API key (optional) |
+| `EMAIL_FROM` | `noreply@stellar-dapp.com` | Sender email address |
+| `EMAIL_FROM_NAME` | `Stellar DApp` | Sender display name |
 | `FRONTEND_URL` | `https://stellapath.onrender.com` | Frontend URL for email links |
 | `CLIENT_PORTAL_URL` | `https://stellapath.onrender.com/client` | Client portal URL |
 
