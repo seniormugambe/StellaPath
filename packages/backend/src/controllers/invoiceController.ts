@@ -17,7 +17,7 @@ import {
   NotificationType
 } from '../types/database';
 import { v4 as uuidv4 } from 'uuid';
-import { InvitationService } from '../services/InvitationService';
+import { InvitationDeliveryResult, InvitationService } from '../services/InvitationService';
 
 const logger = createLogger();
 const invoiceRepository = new InvoiceRepository(prisma);
@@ -44,13 +44,13 @@ async function sendInvoiceInvitation(
     approvalToken: string;
   },
   senderName: string
-): Promise<void> {
+): Promise<InvitationDeliveryResult & { approvalUrl?: string }> {
+  const approvalUrl = `${getClientPortalUrl()}/invoice/${invoice.approvalToken}`;
   try {
     const clientUser = await invitationService.findUserByEmail(invoice.clientEmail);
-    const approvalUrl = `${getClientPortalUrl()}/invoice/${invoice.approvalToken}`;
     const amount = Number(invoice.totalAmount ?? invoice.amount ?? 0).toFixed(7);
 
-    await invitationService.sendInvitation({
+    const delivery = await invitationService.sendInvitation({
       target: { user: clientUser, email: invoice.clientEmail },
       title: 'Invoice Invitation',
       message: `You have been invited to review an invoice for ${amount} XLM.`,
@@ -70,11 +70,23 @@ async function sendInvoiceInvitation(
         type: 'invoice_invitation',
       },
     });
+
+    return {
+      ...delivery,
+      approvalUrl,
+    };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.warn('Failed to send invoice invitation', {
       invoiceId: invoice.id,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: message,
     });
+    return {
+      notificationCreated: false,
+      emailStatus: 'failed',
+      error: message,
+      approvalUrl,
+    };
   }
 }
 
@@ -115,22 +127,27 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
   });
 
   logger.info(`Invoice created: ${invoice.id} for ${clientEmail}`);
-  void sendInvoiceInvitation(invoice, req.user.walletAddress);
+  const invitationDelivery = await sendInvoiceInvitation(invoice, req.user.walletAddress);
+  const responseInvoice =
+    invitationDelivery.emailStatus === 'sent'
+      ? await invoiceRepository.updateStatus(invoice.id, { status: InvoiceStatus.SENT })
+      : invoice;
 
   res.status(201).json({
     success: true,
     invoice: {
-      id: invoice.id,
-      clientEmail: invoice.clientEmail,
-      totalAmount: invoice.totalAmount,
-      description: invoice.description,
-      status: invoice.status,
-      dueDate: invoice.dueDate,
-      createdAt: invoice.createdAt,
-      approvalToken: invoice.approvalToken,
-      metadata: invoice.metadata,
-      lineItems: invoice.lineItems
-    }
+      id: responseInvoice.id,
+      clientEmail: responseInvoice.clientEmail,
+      totalAmount: responseInvoice.totalAmount,
+      description: responseInvoice.description,
+      status: responseInvoice.status,
+      dueDate: responseInvoice.dueDate,
+      createdAt: responseInvoice.createdAt,
+      approvalToken: responseInvoice.approvalToken,
+      metadata: responseInvoice.metadata,
+      lineItems: responseInvoice.lineItems
+    },
+    invitationDelivery
   });
 });
 

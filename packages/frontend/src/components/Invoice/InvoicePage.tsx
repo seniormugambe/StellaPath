@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Box, Tabs, Tab, Paper, Alert, Snackbar, Typography } from '@mui/material'
+import type { AlertColor } from '@mui/material'
 import { BackButton } from '../Common/BackButton'
 import { useAppSelector, useAppDispatch } from '../../store/hooks'
 import {
@@ -34,12 +35,24 @@ const normalizeInvoice = (invoice: any): InvoiceListItem => ({
   status: String(invoice.status).toLowerCase() as InvoiceStatus,
 })
 
+interface InvitationDelivery {
+  emailStatus: 'sent' | 'failed' | 'skipped'
+  error?: string
+  approvalUrl?: string
+}
+
+interface InvoiceCreateResponse {
+  invoice: InvoiceListItem
+  invitationDelivery?: InvitationDelivery
+}
+
 export const InvoicePage = () => {
   const dispatch = useAppDispatch()
   const { invoices, loading, error, statusFilter } = useAppSelector((state) => state.invoice)
   const { accountId, connected } = useAppSelector((state) => state.wallet)
   const [activeTab, setActiveTab] = useState(0)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [messageSeverity, setMessageSeverity] = useState<AlertColor>('success')
 
   useEffect(() => {
     if (connected && accountId) {
@@ -65,7 +78,7 @@ export const InvoicePage = () => {
   const handleCreateInvoice = async (formData: InvoiceFormData) => {
     dispatch(setLoading(true))
     try {
-      const response = await apiClient.post<{ invoice: InvoiceListItem }>('/invoices', {
+      const response = await apiClient.post<InvoiceCreateResponse>('/invoices', {
         clientEmail: formData.clientEmail,
         description: formData.description,
         dueDate: new Date(formData.dueDate).toISOString(),
@@ -77,6 +90,9 @@ export const InvoicePage = () => {
       })
 
       const invoice = response.data?.invoice ?? (response as typeof response & { invoice?: InvoiceListItem }).invoice
+      const invitationDelivery =
+        response.data?.invitationDelivery ??
+        (response as typeof response & { invitationDelivery?: InvitationDelivery }).invitationDelivery
 
       if (response.success && invoice) {
         const normalizedInvoice = normalizeInvoice(invoice)
@@ -90,7 +106,14 @@ export const InvoicePage = () => {
           createdAt: normalizedInvoice.createdAt,
           approvalToken: normalizedInvoice.approvalToken,
         }))
-        setSuccessMessage('Invoice created successfully!')
+        if (invitationDelivery?.emailStatus === 'sent') {
+          setMessageSeverity('success')
+          setSuccessMessage('Invoice created and invitation email sent.')
+        } else {
+          const deliveryError = invitationDelivery?.error ? ` ${invitationDelivery.error}` : ''
+          setMessageSeverity('warning')
+          setSuccessMessage(`Invoice created, but the invitation email was not sent.${deliveryError}`)
+        }
         setActiveTab(1)
       } else {
         throw new Error(response.error || 'Failed to create invoice')
@@ -110,6 +133,7 @@ export const InvoicePage = () => {
 
       if (response.success) {
         dispatch(updateInvoiceInList({ id: invoiceId, updates: { status: 'sent' as InvoiceStatus } }))
+        setMessageSeverity('success')
         setSuccessMessage('Invoice sent to client!')
       } else {
         dispatch(setError(response.error || 'Failed to send invoice'))
@@ -133,6 +157,7 @@ export const InvoicePage = () => {
             txHash: invoice?.txHash,
           },
         }))
+        setMessageSeverity('success')
         setSuccessMessage('Invoice payment executed successfully!')
       } else {
         dispatch(setError(response.error || 'Failed to execute invoice'))
@@ -211,7 +236,7 @@ export const InvoicePage = () => {
       >
         <Alert
           onClose={() => setSuccessMessage(null)}
-          severity="success"
+          severity={messageSeverity}
           sx={{ width: '100%' }}
           variant="filled"
         >

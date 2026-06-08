@@ -63,7 +63,7 @@ describe('InvitationService', () => {
     const { service, notificationRepository } = createService();
     const user = createMockUser();
 
-    await service.sendInvitation({
+    const result = await service.sendInvitation({
       target: { user },
       title: 'Escrow Invitation',
       message: 'You were invited to an escrow.',
@@ -88,12 +88,17 @@ describe('InvitationService', () => {
         subject: 'Escrow invitation',
       })
     );
+    expect(result).toEqual({
+      notificationCreated: true,
+      emailStatus: 'sent',
+      messageId: 'email-1',
+    });
   });
 
   it('sends email-only invitations for external recipients', async () => {
     const { service, notificationRepository } = createService();
 
-    await service.sendInvitation({
+    const result = await service.sendInvitation({
       target: { email: 'client@example.com' },
       title: 'Invoice Invitation',
       message: 'You were invited to review an invoice.',
@@ -109,6 +114,29 @@ describe('InvitationService', () => {
         subject: 'Invoice invitation',
       })
     );
+    expect(result).toEqual({
+      notificationCreated: false,
+      emailStatus: 'sent',
+      messageId: 'email-1',
+    });
+  });
+
+  it('reports failed email delivery without throwing', async () => {
+    (sendEmail as jest.Mock).mockResolvedValueOnce({ success: false, error: 'RESEND_API_KEY is not configured' });
+    const { service } = createService();
+
+    await expect(service.sendInvitation({
+      target: { email: 'client@example.com' },
+      title: 'Invoice Invitation',
+      message: 'You were invited to review an invoice.',
+      emailSubject: 'Invoice invitation',
+      emailHtml: '<p>Invoice invitation</p>',
+      emailText: 'Invoice invitation',
+    })).resolves.toEqual({
+      notificationCreated: false,
+      emailStatus: 'failed',
+      error: 'RESEND_API_KEY is not configured',
+    });
   });
 
   it('looks up users by wallet address and email', async () => {

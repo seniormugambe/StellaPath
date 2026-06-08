@@ -20,6 +20,13 @@ interface InvitationParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface InvitationDeliveryResult {
+  notificationCreated: boolean;
+  emailStatus: 'sent' | 'failed' | 'skipped';
+  messageId?: string;
+  error?: string;
+}
+
 export class InvitationService {
   constructor(
     private notificationRepository: NotificationRepository,
@@ -36,8 +43,12 @@ export class InvitationService {
     return this.userRepository.findByEmail(email);
   }
 
-  async sendInvitation(params: InvitationParams): Promise<void> {
+  async sendInvitation(params: InvitationParams): Promise<InvitationDeliveryResult> {
     const targetEmail = params.target.email || params.target.user?.email;
+    const delivery: InvitationDeliveryResult = {
+      notificationCreated: false,
+      emailStatus: targetEmail ? 'failed' : 'skipped',
+    };
 
     if (params.target.user) {
       await this.notificationRepository.create({
@@ -48,6 +59,7 @@ export class InvitationService {
         ...(params.actionUrl ? { actionUrl: params.actionUrl } : {}),
         metadata: params.metadata || {},
       });
+      delivery.notificationCreated = true;
     }
 
     if (targetEmail) {
@@ -59,10 +71,17 @@ export class InvitationService {
       });
 
       if (!result.success) {
+        delivery.emailStatus = 'failed';
+        delivery.error = result.error || 'Invitation email was not sent';
         logger.warn('Invitation email was not sent', {
           email: targetEmail,
           error: result.error,
         });
+      } else {
+        delivery.emailStatus = 'sent';
+        if (result.messageId) {
+          delivery.messageId = result.messageId;
+        }
       }
     }
 
@@ -72,5 +91,7 @@ export class InvitationService {
         metadata: params.metadata,
       });
     }
+
+    return delivery;
   }
 }
