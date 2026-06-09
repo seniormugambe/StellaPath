@@ -199,16 +199,17 @@ function App() {
                   >
                     {connected ? 'Open dashboard' : 'Connect wallet'}
                   </Button>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    onClick={() => navigate('/invoices')}
-                    disabled={featureLocked}
-                    fullWidth
-                    sx={{ px: 4, py: 1.5, width: { sm: 'auto' } }}
-                  >
-                    Create invoice
-                  </Button>
+                  {connected && (
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      onClick={() => navigate('/invoices')}
+                      fullWidth
+                      sx={{ px: 4, py: 1.5, width: { sm: 'auto' } }}
+                    >
+                      Create invoice
+                    </Button>
+                  )}
                 </Stack>
                 <Grid container spacing={{ xs: 1.25, sm: 2 }} sx={{ maxWidth: 760 }}>
                   {[
@@ -300,128 +301,164 @@ function App() {
               </Box>
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <Typography
-                variant="h4"
-                component="h2"
-                sx={{ mb: 1, fontSize: { xs: '1.55rem', md: '1.75rem' }, letterSpacing: 0 }}
-              >
-                What would you like to do?
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Choose the path that matches the payment job in front of you.
-              </Typography>
-            </Box>
-
-            <Grid container spacing={{ xs: 1.75, md: 3 }} sx={{ mb: { xs: 3, md: 4 } }}>
-              {primaryActions.map((action) => (
-                <Grid item xs={12} sm={6} md={3} key={action.title}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      cursor: featureLocked ? 'not-allowed' : 'pointer',
-                      borderRadius: 2,
-                      opacity: featureLocked ? 0.58 : 1,
-                      '&:hover': {
-                        transform: featureLocked ? 'none' : 'translateY(-4px)',
-                        boxShadow: featureLocked ? 0 : 5,
-                        borderColor: featureLocked ? 'divider' : 'secondary.main',
-                      },
-                    }}
-                    onClick={() => openFeature(action.path)}
-                    aria-disabled={featureLocked}
+            {connected && (
+              <>
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="h4"
+                    component="h2"
+                    sx={{ mb: 1, fontSize: { xs: '1.55rem', md: '1.75rem' }, letterSpacing: 0 }}
                   >
-                    <CardContent sx={{ p: { xs: 2, md: 3 }, height: '100%' }}>
-                      <Stack
-                        direction={{ xs: 'row', sm: 'column' }}
-                        spacing={{ xs: 1.75, md: 2 }}
-                        alignItems={{ xs: 'center', sm: 'flex-start' }}
-                        sx={{ height: '100%' }}
-                      >
-                        <Box
-                          sx={{
-                            width: { xs: 48, md: 58 },
-                            height: { xs: 48, md: 58 },
-                            borderRadius: 2,
-                            display: 'grid',
-                            placeItems: 'center',
-                            flexShrink: 0,
-                            color: 'secondary.main',
-                            bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
-                            '& svg': { fontSize: { xs: 28, md: 34 } },
-                          }}
-                        >
-                          {action.icon}
-                        </Box>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="h5" gutterBottom sx={{ fontSize: { xs: '1.1rem', md: '1.5rem' } }}>
-                            {action.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {action.description}
-                          </Typography>
-                        </Box>
-                        <Button
-                          endIcon={<ArrowForward />}
-                          disabled={featureLocked}
-                          sx={{
-                            alignSelf: { xs: 'center', sm: 'flex-start' },
-                            minWidth: { xs: 40, sm: 'auto' },
-                            px: { xs: 0.5, sm: 0 },
-                            '& .MuiButton-endIcon': { mx: 0 },
-                          }}
-                          aria-label={`Open ${action.title}`}
-                        >
-                          {featureLocked ? 'Locked' : 'Open'}
-                        </Button>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                    What would you like to do?
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Choose the path that matches the payment job in front of you.
+                  </Typography>
+                </Box>
 
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={2}
-              sx={{
-                p: { xs: 1.5, md: 2.5 },
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-              }}
-            >
-              {additionalTools.map((tool) => (
-                <Button
-                  key={tool.label}
-                  onClick={() => openFeature(tool.path)}
-                  startIcon={tool.icon}
-                  endIcon={<ArrowForward />}
-                  disabled={featureLocked}
+                <Stack spacing={1.25} sx={{ display: { xs: 'flex', md: 'none' }, mb: 3 }}>
+                  {primaryActions.map((action) => (
+                    <Button
+                      key={action.title}
+                      onClick={() => openFeature(action.path)}
+                      startIcon={action.icon}
+                      endIcon={<ArrowForward />}
+                      sx={{
+                        justifyContent: 'space-between',
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                        textAlign: 'left',
+                        bgcolor: 'background.paper',
+                        '& .MuiButton-startIcon': {
+                          color: 'secondary.main',
+                          mr: 1.25,
+                          '& svg': { fontSize: 28 },
+                        },
+                      }}
+                    >
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography component="span" sx={{ display: 'block', fontWeight: 700 }}>
+                          {action.title}
+                        </Typography>
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 400 }}>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Button>
+                  ))}
+                </Stack>
+
+                <Grid
+                  container
+                  spacing={3}
+                  sx={{ display: { xs: 'none', md: 'flex' }, mb: 4 }}
+                >
+                  {primaryActions.map((action) => (
+                    <Grid item md={3} key={action.title}>
+                      <Card
+                        sx={{
+                          height: '100%',
+                          cursor: 'pointer',
+                          borderRadius: 2,
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: 5,
+                            borderColor: 'secondary.main',
+                          },
+                        }}
+                        onClick={() => openFeature(action.path)}
+                      >
+                        <CardContent sx={{ p: 3, height: '100%' }}>
+                          <Stack
+                            spacing={2}
+                            alignItems="flex-start"
+                            sx={{ height: '100%' }}
+                          >
+                            <Box
+                              sx={{
+                                width: 58,
+                                height: 58,
+                                borderRadius: 2,
+                                display: 'grid',
+                                placeItems: 'center',
+                                flexShrink: 0,
+                                color: 'secondary.main',
+                                bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
+                                '& svg': { fontSize: 34 },
+                              }}
+                            >
+                              {action.icon}
+                            </Box>
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Typography variant="h5" gutterBottom>
+                                {action.title}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {action.description}
+                              </Typography>
+                            </Box>
+                            <Button
+                              endIcon={<ArrowForward />}
+                              sx={{
+                                alignSelf: 'flex-start',
+                                px: 0,
+                              }}
+                              aria-label={`Open ${action.title}`}
+                            >
+                              Open
+                            </Button>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+
+                <Stack
+                  direction={{ xs: 'column', md: 'row' }}
+                  spacing={2}
                   sx={{
-                    flex: 1,
-                    justifyContent: 'space-between',
-                    p: { xs: 1.5, md: 2 },
+                    p: { xs: 1.5, md: 2.5 },
                     borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
-                    color: featureLocked ? 'text.disabled' : 'text.primary',
-                    textAlign: 'left',
-                    '& .MuiButton-startIcon': { color: featureLocked ? 'text.disabled' : 'secondary.main' },
+                    bgcolor: 'background.paper',
                   }}
                 >
-                  <Box sx={{ flex: 1 }}>
-                    <Typography component="span" sx={{ display: 'block', fontWeight: 700 }}>
-                      {tool.label}
-                    </Typography>
-                    <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 400 }}>
-                      {tool.helper}
-                    </Typography>
-                  </Box>
-                </Button>
-              ))}
-            </Stack>
+                  {additionalTools.map((tool) => (
+                    <Button
+                      key={tool.label}
+                      onClick={() => openFeature(tool.path)}
+                      startIcon={tool.icon}
+                      endIcon={<ArrowForward />}
+                      sx={{
+                        flex: 1,
+                        justifyContent: 'space-between',
+                        p: { xs: 1.5, md: 2 },
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                        textAlign: 'left',
+                        '& .MuiButton-startIcon': { color: 'secondary.main' },
+                      }}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography component="span" sx={{ display: 'block', fontWeight: 700 }}>
+                          {tool.label}
+                        </Typography>
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 400 }}>
+                          {tool.helper}
+                        </Typography>
+                      </Box>
+                    </Button>
+                  ))}
+                </Stack>
+              </>
+            )}
           </Box>
         } />
         
