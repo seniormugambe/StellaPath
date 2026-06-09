@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Button, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material'
+import { Box, Button, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material'
 import {
   AccountBalanceWallet as WalletIcon,
   Logout as LogoutIcon,
@@ -69,13 +69,21 @@ export const WalletButton = () => {
         onClick={handleClick}
         variant={connected ? 'outlined' : 'contained'}
         sx={{
+          minWidth: { xs: 44, sm: 156 },
+          px: { xs: 1.1, sm: 2.5 },
           borderColor: connected ? 'inherit' : undefined,
+          '& .MuiButton-startIcon': {
+            mr: { xs: 0, sm: 1 },
+          },
           '&:hover': {
             borderColor: connected ? 'inherit' : undefined,
           },
         }}
+        aria-label={connected ? `Connected wallet ${formatAddress(accountId)}` : 'Connect wallet'}
       >
-        {connected ? formatAddress(accountId) : 'Connect Wallet'}
+        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+          {connected ? formatAddress(accountId) : 'Connect Wallet'}
+        </Box>
       </Button>
 
       {/* Connected wallet menu */}

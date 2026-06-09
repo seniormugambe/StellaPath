@@ -16,18 +16,23 @@ export const Layout = ({ children }: LayoutProps) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static" elevation={0}>
-        <Toolbar sx={{ py: 1 }}>
+        <Toolbar sx={{ py: { xs: 1, sm: 1 }, px: { xs: 1.5, sm: 3 }, gap: { xs: 0.75, sm: 1 } }}>
           <Typography
             variant="h5"
             component="div"
             sx={{ 
               flexGrow: 1, 
+              minWidth: 0,
               cursor: 'pointer',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: 1,
-              letterSpacing: '-0.02em'
+              fontSize: { xs: '1.05rem', sm: '1.5rem' },
+              letterSpacing: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
             onClick={() => navigate('/')}
           >
@@ -116,7 +121,15 @@ export const Layout = ({ children }: LayoutProps) => {
         </Toolbar>
       </AppBar>
 
-      <Container component="main" maxWidth="xl" sx={{ flexGrow: 1, py: 4 }}>
+      <Container
+        component="main"
+        maxWidth="xl"
+        sx={{
+          flexGrow: 1,
+          py: { xs: 2.5, md: 4 },
+          px: { xs: 2, sm: 3 },
+        }}
+      >
         {children}
       </Container>
 
@@ -124,7 +137,7 @@ export const Layout = ({ children }: LayoutProps) => {
         component="footer"
         sx={{
           py: 3,
-          px: 2,
+          px: { xs: 2, sm: 3 },
           mt: 'auto',
           background: 'linear-gradient(135deg, rgba(235, 227, 219, 0.5) 0%, rgba(245, 241, 237, 0.5) 100%)',
           backdropFilter: 'blur(10px)',

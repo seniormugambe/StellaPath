@@ -46,13 +46,6 @@ textarea:focus-visible {
   color: #ff9800;
 }
 
-/* Responsive utilities */
-@media (max-width: 600px) {
-  #root {
-    padding: 1rem;
-  }
-}
-
 /* Print styles */
 @media print {
   .no-print {
