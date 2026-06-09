@@ -27,6 +27,66 @@ import './App.css'
 function App() {
   const navigate = useNavigate()
   const { connected } = useAppSelector((state) => state.wallet)
+  const featureLocked = !connected
+
+  const openWalletDialog = () => {
+    window.dispatchEvent(new Event('stellarpath:wallet:open'))
+  }
+
+  const openFeature = (path: string) => {
+    if (featureLocked) return
+    navigate(path)
+  }
+
+  const renderLockedFeature = (featureName: string) => (
+    <Box
+      sx={{
+        display: 'grid',
+        placeItems: 'center',
+        minHeight: { xs: '55vh', md: '62vh' },
+        px: { xs: 1, sm: 2 },
+      }}
+    >
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: 560,
+          p: { xs: 3, md: 4 },
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          textAlign: 'center',
+          boxShadow: 2,
+        }}
+      >
+        <Box
+          sx={{
+            width: 60,
+            height: 60,
+            mx: 'auto',
+            mb: 2,
+            borderRadius: 2,
+            display: 'grid',
+            placeItems: 'center',
+            color: 'secondary.main',
+            bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
+          }}
+        >
+          <Lock sx={{ fontSize: 34 }} />
+        </Box>
+        <Typography variant="h4" component="h1" sx={{ mb: 1, fontSize: { xs: '1.65rem', md: '2rem' } }}>
+          Connect your wallet to use {featureName}
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          Stellar payment tools stay disabled until a wallet is connected and ready to sign.
+        </Typography>
+        <Button variant="contained" size="large" onClick={openWalletDialog} fullWidth sx={{ width: { sm: 'auto' } }}>
+          Connect wallet
+        </Button>
+      </Box>
+    </Box>
+  )
 
   const primaryActions = [
     {
@@ -132,17 +192,18 @@ function App() {
                   <Button
                     variant="contained"
                     size="large"
-                    endIcon={<ArrowForward />}
-                    onClick={() => navigate(connected ? '/dashboard' : '/transactions')}
+                    endIcon={connected ? <ArrowForward /> : undefined}
+                    onClick={() => connected ? navigate('/dashboard') : openWalletDialog()}
                     fullWidth
                     sx={{ px: 4, py: 1.5, width: { sm: 'auto' } }}
                   >
-                    {connected ? 'Open dashboard' : 'Start a payment'}
+                    {connected ? 'Open dashboard' : 'Connect wallet'}
                   </Button>
                   <Button
                     variant="outlined"
                     size="large"
                     onClick={() => navigate('/invoices')}
+                    disabled={featureLocked}
                     fullWidth
                     sx={{ px: 4, py: 1.5, width: { sm: 'auto' } }}
                   >
@@ -204,12 +265,12 @@ function App() {
                       Suggested next step
                     </Typography>
                     <Typography variant="h6" sx={{ mb: 1 }}>
-                      {connected ? 'Review your dashboard' : 'Connect your wallet from the top bar'}
+                      {connected ? 'Review your dashboard' : 'Connect your wallet to unlock features'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {connected
                         ? 'Your payment tools are unlocked. Start with your dashboard or jump straight into a transfer.'
-                        : 'You can explore the tools first, then connect when you are ready to send, sign, or collect funds.'}
+                        : 'Payment, escrow, invoice, sharing, P2P, and X402 tools are disabled until your wallet is connected.'}
                     </Typography>
                   </Box>
                   <Stack spacing={1.25}>
@@ -258,15 +319,17 @@ function App() {
                   <Card
                     sx={{
                       height: '100%',
-                      cursor: 'pointer',
+                      cursor: featureLocked ? 'not-allowed' : 'pointer',
                       borderRadius: 2,
+                      opacity: featureLocked ? 0.58 : 1,
                       '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 5,
-                        borderColor: 'secondary.main',
+                        transform: featureLocked ? 'none' : 'translateY(-4px)',
+                        boxShadow: featureLocked ? 0 : 5,
+                        borderColor: featureLocked ? 'divider' : 'secondary.main',
                       },
                     }}
-                    onClick={() => navigate(action.path)}
+                    onClick={() => openFeature(action.path)}
+                    aria-disabled={featureLocked}
                   >
                     <CardContent sx={{ p: { xs: 2, md: 3 }, height: '100%' }}>
                       <Stack
@@ -300,6 +363,7 @@ function App() {
                         </Box>
                         <Button
                           endIcon={<ArrowForward />}
+                          disabled={featureLocked}
                           sx={{
                             alignSelf: { xs: 'center', sm: 'flex-start' },
                             minWidth: { xs: 40, sm: 'auto' },
@@ -308,7 +372,7 @@ function App() {
                           }}
                           aria-label={`Open ${action.title}`}
                         >
-                          Open
+                          {featureLocked ? 'Locked' : 'Open'}
                         </Button>
                       </Stack>
                     </CardContent>
@@ -331,9 +395,10 @@ function App() {
               {additionalTools.map((tool) => (
                 <Button
                   key={tool.label}
-                  onClick={() => navigate(tool.path)}
+                  onClick={() => openFeature(tool.path)}
                   startIcon={tool.icon}
                   endIcon={<ArrowForward />}
+                  disabled={featureLocked}
                   sx={{
                     flex: 1,
                     justifyContent: 'space-between',
@@ -341,9 +406,9 @@ function App() {
                     borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
-                    color: 'text.primary',
+                    color: featureLocked ? 'text.disabled' : 'text.primary',
                     textAlign: 'left',
-                    '& .MuiButton-startIcon': { color: 'secondary.main' },
+                    '& .MuiButton-startIcon': { color: featureLocked ? 'text.disabled' : 'secondary.main' },
                   }}
                 >
                   <Box sx={{ flex: 1 }}>
@@ -360,17 +425,17 @@ function App() {
           </Box>
         } />
         
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={connected ? <Dashboard /> : renderLockedFeature('the dashboard')} />
         
-        <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/transactions" element={connected ? <TransactionsPage /> : renderLockedFeature('transactions')} />
         
-        <Route path="/escrow" element={<EscrowPage />} />
+        <Route path="/escrow" element={connected ? <EscrowPage /> : renderLockedFeature('escrow')} />
         
-        <Route path="/invoices" element={<InvoicePage />} />
+        <Route path="/invoices" element={connected ? <InvoicePage /> : renderLockedFeature('invoices')} />
         
-        <Route path="/p2p" element={<P2PPage />} />
+        <Route path="/p2p" element={connected ? <P2PPage /> : renderLockedFeature('P2P payments')} />
         
-        <Route path="/x402" element={<X402Page />} />
+        <Route path="/x402" element={connected ? <X402Page /> : renderLockedFeature('X402 payments')} />
         
         <Route path="/client/*" element={<ClientPortalPage />} />
       </Routes>
