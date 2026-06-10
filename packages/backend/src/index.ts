@@ -49,6 +49,20 @@ if (missingEnv.length > 0) {
 const app = express();
 const logger = createLogger();
 const PORT = parseInt(process.env['PORT'] as string, 10) || 3001;
+const corsOrigins = Array.from(new Set([
+  ...(process.env['CORS_ORIGIN'] || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+  ...(process.env['CORS_ORIGINS'] || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3002',
+]));
 
 // Security middleware — comprehensive CSP and headers (Req 5.3, 5.4)
 app.use(helmet({
@@ -94,12 +108,9 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: [
-    process.env['CORS_ORIGIN'] || 'http://localhost:3000',
-    'http://localhost:3002' // Additional frontend port
-  ],
+  origin: corsOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -186,7 +197,7 @@ if (process.env['NODE_ENV'] !== 'test') {
   app.listen(PORT, () => {
     logger.info(`Stellar DApp Backend Server running on port ${PORT}`);
     logger.info(`Environment: ${process.env['NODE_ENV'] || 'development'}`);
-    logger.info(`CORS Origin: ${process.env['CORS_ORIGIN'] || 'http://localhost:3000'}`);
+    logger.info(`CORS Origins: ${corsOrigins.join(', ')}`);
   });
 }
 

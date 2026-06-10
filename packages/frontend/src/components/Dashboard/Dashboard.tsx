@@ -1,59 +1,316 @@
 import React, { useEffect } from 'react';
 import {
+  Alert,
   Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  CircularProgress,
   Container,
   Grid,
-  Paper,
-  Typography,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
-  CircularProgress,
-  Alert,
+  Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import {
+  AccountBalance,
+  Add,
+  ArrowForward,
+  Receipt,
+  Refresh,
+  SwapHoriz,
+  Timelapse,
+} from '@mui/icons-material';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { apiClient } from '../../utils/api';
 import { setInvoices, setLoading as setInvoiceLoading, setError as setInvoiceError } from '../../store/slices/invoiceSlice';
 import { setEscrows, setLoading as setEscrowLoading, setError as setEscrowError } from '../../store/slices/escrowSlice';
 import { setTransactions, setLoading as setTransactionsLoading, setError as setTransactionsError } from '../../store/slices/transactionsSlice';
-import {
-  TrendingUp,
-  AccountBalance,
-  SwapHoriz,
-  Receipt,
-  ArrowForward,
-} from '@mui/icons-material';
 import type { InvoiceListItem } from '../../store/slices/invoiceSlice';
 import type { EscrowListItem } from '../../store/slices/escrowSlice';
 import type { Transaction } from '../../store/slices/transactionsSlice';
+
+type StatusColor = 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
+
+const formatXlm = (amount: number, maximumFractionDigits = 2) =>
+  `${Number(amount || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  })} XLM`;
+
+const formatStatus = (status: string) =>
+  status.replace(/_/g, ' ');
+
+const shortenAddress = (value?: string | null) => {
+  if (!value) return 'Unknown';
+  if (value.length <= 14) return value;
+  return `${value.slice(0, 6)}...${value.slice(-6)}`;
+};
+
+const getStatusColor = (status: string): StatusColor => {
+  const statusColors: Record<string, StatusColor> = {
+    draft: 'default',
+    sent: 'info',
+    approved: 'success',
+    executed: 'success',
+    rejected: 'error',
+    expired: 'warning',
+    active: 'success',
+    conditions_met: 'info',
+    released: 'success',
+    refunded: 'warning',
+    confirmed: 'success',
+    pending: 'info',
+    failed: 'error',
+    cancelled: 'warning',
+  };
+
+  return statusColors[status] || 'default';
+};
+
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  helper: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+}
+
+const MetricCard = ({ title, value, helper, icon, onClick }: MetricCardProps) => (
+  <Card sx={{ height: '100%', borderRadius: 2 }}>
+    <CardActionArea onClick={onClick} disabled={!onClick} sx={{ height: '100%' }}>
+      <CardContent sx={{ height: '100%', p: { xs: 1.75, md: 2.5 } }}>
+        <Stack spacing={{ xs: 1.5, md: 2 }} sx={{ height: '100%' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+              {title}
+            </Typography>
+            <Box
+              sx={{
+                width: { xs: 36, md: 42 },
+                height: { xs: 36, md: 42 },
+                borderRadius: 2,
+                display: 'grid',
+                placeItems: 'center',
+                color: 'secondary.main',
+                bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
+                flexShrink: 0,
+              }}
+            >
+              {icon}
+            </Box>
+          </Stack>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.05, fontSize: { xs: '1.65rem', md: '2.125rem' } }}>
+              {value}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, fontSize: { xs: '0.78rem', md: '0.875rem' } }}>
+              {helper}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </CardActionArea>
+  </Card>
+);
+
+interface QuickActionProps {
+  title: string;
+  helper: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+const QuickAction = ({ title, helper, icon, onClick }: QuickActionProps) => (
+  <Card sx={{ height: '100%', borderRadius: 2 }}>
+    <CardActionArea onClick={onClick} sx={{ height: '100%' }}>
+      <CardContent sx={{ p: { xs: 1.75, md: 2.5 } }}>
+        <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, md: 2 }}>
+          <Box
+            sx={{
+              width: { xs: 42, md: 48 },
+              height: { xs: 42, md: 48 },
+              borderRadius: 2,
+              display: 'grid',
+              placeItems: 'center',
+              color: 'secondary.main',
+              bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
+              flexShrink: 0,
+            }}
+          >
+            {icon}
+          </Box>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+              {title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
+              {helper}
+            </Typography>
+          </Box>
+          <ArrowForward sx={{ color: 'text.secondary', fontSize: 20, flexShrink: 0 }} />
+        </Stack>
+      </CardContent>
+    </CardActionArea>
+  </Card>
+);
+
+interface ActivityRow {
+  id: string;
+  title: string;
+  detail: string;
+  amount: number;
+  status: string;
+}
+
+interface ActivityPanelProps {
+  title: string;
+  actionLabel: string;
+  rows: ActivityRow[];
+  emptyText: string;
+  onViewAll: () => void;
+}
+
+const ActivityPanel = ({ title, actionLabel, rows, emptyText, onViewAll }: ActivityPanelProps) => (
+  <Card sx={{ height: '100%', borderRadius: 2 }}>
+    <CardContent sx={{ p: { xs: 1.75, md: 2.5 } }}>
+      <Stack spacing={2}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+            {title}
+          </Typography>
+          <Button size="small" onClick={onViewAll} endIcon={<ArrowForward sx={{ fontSize: 16 }} />}>
+            {actionLabel}
+          </Button>
+        </Stack>
+
+        {rows.length === 0 ? (
+          <Box
+            sx={{
+              minHeight: 150,
+              display: 'grid',
+              placeItems: 'center',
+              border: '1px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+              px: 2,
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {emptyText}
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            <Stack spacing={1.25} sx={{ display: { xs: 'flex', md: 'none' } }}>
+              {rows.map((row) => (
+                <Box
+                  key={row.id}
+                  sx={{
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(250,248,246,0.6)' : 'rgba(26,22,20,0.45)',
+                  }}
+                >
+                  <Stack spacing={1}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>
+                          {row.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                          {row.detail}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={formatStatus(row.status)}
+                        color={getStatusColor(row.status)}
+                        size="small"
+                        variant="outlined"
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    </Stack>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {formatXlm(row.amount)}
+                    </Typography>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+
+            <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={row.id} hover>
+                      <TableCell sx={{ maxWidth: 180 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                          {row.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                          {row.detail}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        {formatXlm(row.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={formatStatus(row.status)}
+                          color={getStatusColor(row.status)}
+                          size="small"
+                          variant="outlined"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+      </Stack>
+    </CardContent>
+  </Card>
+);
 
 const Dashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  // Redux selectors
   const invoices = useAppSelector((state) => state.invoice.invoices);
-  const invoiceStats = useAppSelector((state) => state.invoice.stats);
   const invoiceLoading = useAppSelector((state) => state.invoice.loading);
+  const invoiceError = useAppSelector((state) => state.invoice.error);
 
   const escrows = useAppSelector((state) => state.escrow.escrows);
   const escrowLoading = useAppSelector((state) => state.escrow.loading);
+  const escrowError = useAppSelector((state) => state.escrow.error);
 
   const transactions = useAppSelector((state) => state.transactions.transactions);
   const transactionsLoading = useAppSelector((state) => state.transactions.loading);
+  const transactionsError = useAppSelector((state) => state.transactions.error);
 
   const { connected, accountId } = useAppSelector((state) => state.wallet);
 
-  // Fetch functions
   const fetchInvoicesData = async () => {
     dispatch(setInvoiceLoading(true));
     try {
@@ -96,294 +353,234 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Fetch data on mount
+  const refreshDashboard = () => {
+    if (!connected || !accountId) return;
+    void Promise.all([
+      fetchInvoicesData(),
+      fetchEscrowsData(),
+      fetchTransactionsData(),
+    ]);
+  };
+
   useEffect(() => {
-    if (connected && accountId) {
-      fetchInvoicesData();
-      fetchEscrowsData();
-      fetchTransactionsData();
-    }
+    refreshDashboard();
   }, [connected, accountId]);
 
-  // Calculate statistics
+  const isLoading = invoiceLoading || escrowLoading || transactionsLoading;
+  const hasLoadedData = invoices.length > 0 || escrows.length > 0 || transactions.length > 0;
+  const hasErrors = invoiceError || escrowError || transactionsError;
+
   const invoiceCount = invoices.length;
   const escrowCount = escrows.length;
   const transactionCount = transactions.length;
+  const pendingInvoices = invoices.filter((invoice) => ['draft', 'sent', 'approved'].includes(invoice.status)).length;
+  const pendingEscrows = escrows.filter((escrow) => ['active', 'conditions_met'].includes(escrow.status)).length;
+  const pendingTransactions = transactions.filter((transaction) => transaction.status === 'pending').length;
 
-  const totalInvoiceAmount = invoiceStats?.totalAmount || 0;
-  const totalEscrowAmount = escrows.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalTransactionAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalInvoiceAmount = invoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0);
+  const totalEscrowAmount = escrows.reduce((sum, escrow) => sum + Number(escrow.amount || 0), 0);
+  const totalTransactionAmount = transactions.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
 
-  const pendingInvoices = invoices.filter(
-    (i) => i.status === 'sent' || i.status === 'draft'
-  ).length;
-  const pendingTransactions = transactions.filter((t) => t.status === 'pending').length;
+  const recentInvoices: ActivityRow[] = invoices.slice(0, 5).map((invoice) => ({
+    id: invoice.id,
+    title: invoice.clientEmail,
+    detail: invoice.description || 'Invoice',
+    amount: invoice.totalAmount,
+    status: invoice.status,
+  }));
 
-  const isLoading = invoiceLoading || escrowLoading || transactionsLoading;
+  const recentEscrows: ActivityRow[] = escrows.slice(0, 5).map((escrow) => ({
+    id: escrow.id,
+    title: shortenAddress(escrow.contractId),
+    detail: escrow.recipientId ? `To ${shortenAddress(escrow.recipientId)}` : 'Escrow contract',
+    amount: escrow.amount,
+    status: escrow.status,
+  }));
 
-  // Get recent items (last 5)
-  const recentInvoices = invoices.slice(0, 5);
-  const recentEscrows = escrows.slice(0, 5);
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions: ActivityRow[] = transactions.slice(0, 5).map((transaction) => ({
+    id: transaction.id,
+    title: formatStatus(transaction.type),
+    detail: `To ${shortenAddress(transaction.recipient)}`,
+    amount: transaction.amount,
+    status: transaction.status,
+  }));
 
-  // Status color mapping
-  const getStatusColor = (status: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
-    const statusColors: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
-      draft: 'default',
-      sent: 'info',
-      approved: 'success',
-      executed: 'success',
-      rejected: 'error',
-      expired: 'warning',
-      active: 'success',
-      conditions_met: 'info',
-      released: 'success',
-      refunded: 'warning',
-      confirmed: 'success',
-      pending: 'info',
-      failed: 'error',
-      cancelled: 'warning',
-    };
-    return statusColors[status] || 'default';
-  };
-
-  // Summary Card Component
-  const SummaryCard: React.FC<{
-    title: string;
-    icon: React.ReactNode;
-    count: number;
-    amount?: number;
-    action?: string;
-    onActionClick?: () => void;
-  }> = ({ title, icon, count, amount, action, onActionClick }) => (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ mr: 2, color: 'primary.main' }}>{icon}</Box>
-          <Typography color="textSecondary" gutterBottom>
-            {title}
-          </Typography>
-        </Box>
-        <Typography variant="h4" component="div">
-          {count}
-        </Typography>
-        {amount !== undefined && (
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            {amount.toFixed(7)} XLM
-          </Typography>
-        )}
-      </CardContent>
-      {action && (
-        <CardActions>
-          <Button size="small" onClick={onActionClick}>
-            {action} <ArrowForward sx={{ ml: 1, fontSize: '1rem' }} />
-          </Button>
-        </CardActions>
-      )}
-    </Card>
-  );
-
-  if (isLoading) {
+  if (isLoading && !hasLoadedData) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
+      <Container maxWidth="lg" sx={{ py: 6, display: 'grid', placeItems: 'center', minHeight: '55vh' }}>
+        <Stack spacing={2} alignItems="center">
+          <CircularProgress />
+          <Typography variant="body2" color="text.secondary">
+            Loading dashboard
+          </Typography>
+        </Stack>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Dashboard
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Overview of your invoices, escrow contracts, and transactions
-        </Typography>
-      </Box>
+    <Container maxWidth="lg" sx={{ py: { xs: 2.25, md: 4 }, px: { xs: 2, sm: 3 } }}>
+      <Stack spacing={{ xs: 2.5, md: 4 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+          spacing={2}
+        >
+          <Box>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 800, letterSpacing: 0, fontSize: { xs: '1.75rem', md: '2.125rem' } }}>
+              Dashboard
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              {shortenAddress(accountId)}
+            </Typography>
+          </Box>
 
-      {/* Summary Cards Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <SummaryCard
-            title="Invoices"
-            icon={<Receipt sx={{ fontSize: 40 }} />}
-            count={invoiceCount}
-            amount={totalInvoiceAmount}
-            action="View All"
-            onActionClick={() => navigate('/invoices')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <SummaryCard
-            title="Escrow Contracts"
-            icon={<AccountBalance sx={{ fontSize: 40 }} />}
-            count={escrowCount}
-            amount={totalEscrowAmount}
-            action="View All"
-            onActionClick={() => navigate('/escrow')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <SummaryCard
-            title="Transactions"
-            icon={<SwapHoriz sx={{ fontSize: 40 }} />}
-            count={transactionCount}
-            amount={totalTransactionAmount}
-            action="View All"
-            onActionClick={() => navigate('/transactions')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <SummaryCard
-            title="Pending"
-            icon={<TrendingUp sx={{ fontSize: 40 }} />}
-            count={pendingInvoices + pendingTransactions}
-          />
-        </Grid>
-      </Grid>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            {isLoading && hasLoadedData && (
+              <Chip label="Refreshing" size="small" color="info" variant="outlined" sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }} />
+            )}
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={refreshDashboard}
+              disabled={isLoading}
+              fullWidth
+              sx={{ width: { sm: 'auto' } }}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate('/transactions')}
+              fullWidth
+              sx={{ width: { sm: 'auto' } }}
+            >
+              New payment
+            </Button>
+          </Stack>
+        </Stack>
 
-      {/* Recent Activity Section */}
-      <Grid container spacing={3}>
-        {/* Recent Invoices */}
-        {recentInvoices.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Recent Invoices</Typography>
-                <Button size="small" onClick={() => navigate('/invoices')}>
-                  View All
-                </Button>
-              </Box>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell>Client</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell>Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentInvoices.map((invoice) => (
-                      <TableRow key={invoice.id} hover>
-                        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {invoice.clientEmail}
-                        </TableCell>
-                        <TableCell align="right">{invoice.totalAmount.toFixed(2)} XLM</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={invoice.status}
-                            color={getStatusColor(invoice.status)}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
+        {hasErrors && (
+          <Alert severity="warning">
+            Some dashboard data could not load. Try refresh, or check the backend connection.
+          </Alert>
         )}
 
-        {/* Recent Escrows */}
-        {recentEscrows.length > 0 && (
-          <Grid item xs={12} md={6} lg={4}>
-            <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Active Escrows</Typography>
-                <Button size="small" onClick={() => navigate('/escrow')}>
-                  View All
-                </Button>
-              </Box>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell>Contract ID</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell>Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentEscrows.map((escrow) => (
-                      <TableRow key={escrow.id} hover>
-                        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {escrow.contractId}
-                        </TableCell>
-                        <TableCell align="right">{escrow.amount.toFixed(2)} XLM</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={escrow.status}
-                            color={getStatusColor(escrow.status)}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+        <Box>
+          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>
+            Quick actions
+          </Typography>
+          <Grid container spacing={{ xs: 1.5, md: 2 }} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} md={4}>
+              <QuickAction
+                title="Send payment"
+                helper="Create a Stellar transfer"
+                icon={<SwapHoriz />}
+                onClick={() => navigate('/transactions')}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <QuickAction
+                title="Create invoice"
+                helper="Request client payment"
+                icon={<Receipt />}
+                onClick={() => navigate('/invoices')}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <QuickAction
+                title="Start escrow"
+                helper="Lock funds by condition"
+                icon={<AccountBalance />}
+                onClick={() => navigate('/escrow')}
+              />
+            </Grid>
           </Grid>
+        </Box>
+
+        <Grid container spacing={{ xs: 1.5, md: 2 }}>
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Invoices"
+              value={invoiceCount}
+              helper={formatXlm(totalInvoiceAmount)}
+              icon={<Receipt />}
+              onClick={() => navigate('/invoices')}
+            />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Escrow"
+              value={escrowCount}
+              helper={formatXlm(totalEscrowAmount)}
+              icon={<AccountBalance />}
+              onClick={() => navigate('/escrow')}
+            />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Transactions"
+              value={transactionCount}
+              helper={formatXlm(totalTransactionAmount)}
+              icon={<SwapHoriz />}
+              onClick={() => navigate('/transactions')}
+            />
+          </Grid>
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Open items"
+              value={pendingInvoices + pendingEscrows + pendingTransactions}
+              helper="Needs attention"
+              icon={<Timelapse />}
+            />
+          </Grid>
+        </Grid>
+
+        {!hasLoadedData && (
+          <Alert
+            severity="info"
+            action={
+              <Button color="inherit" size="small" onClick={() => navigate('/transactions')}>
+                Start
+              </Button>
+            }
+          >
+            No activity yet. Start with a payment, invoice, or escrow.
+          </Alert>
         )}
 
-        {/* Recent Transactions */}
-        {recentTransactions.length > 0 && (
-          <Grid item xs={12} md={12} lg={4}>
-            <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Recent Transactions</Typography>
-                <Button size="small" onClick={() => navigate('/transactions')}>
-                  View All
-                </Button>
-              </Box>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell>Type</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell>Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentTransactions.map((transaction) => (
-                      <TableRow key={transaction.id} hover>
-                        <TableCell sx={{ textTransform: 'capitalize' }}>
-                          {transaction.type}
-                        </TableCell>
-                        <TableCell align="right">{transaction.amount.toFixed(2)} XLM</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={transaction.status}
-                            color={getStatusColor(transaction.status)}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+        <Grid container spacing={{ xs: 1.5, md: 2 }}>
+          <Grid item xs={12} lg={4}>
+            <ActivityPanel
+              title="Recent invoices"
+              actionLabel="Invoices"
+              rows={recentInvoices}
+              emptyText="No invoices yet"
+              onViewAll={() => navigate('/invoices')}
+            />
           </Grid>
-        )}
-
-        {/* Empty State */}
-        {recentInvoices.length === 0 && recentEscrows.length === 0 && recentTransactions.length === 0 && (
-          <Grid item xs={12}>
-            <Alert severity="info">
-              No activity yet. Start by creating an invoice, escrow contract, or transaction.
-            </Alert>
+          <Grid item xs={12} lg={4}>
+            <ActivityPanel
+              title="Recent escrows"
+              actionLabel="Escrow"
+              rows={recentEscrows}
+              emptyText="No escrow contracts yet"
+              onViewAll={() => navigate('/escrow')}
+            />
           </Grid>
-        )}
-      </Grid>
+          <Grid item xs={12} lg={4}>
+            <ActivityPanel
+              title="Recent transactions"
+              actionLabel="Transactions"
+              rows={recentTransactions}
+              emptyText="No transactions yet"
+              onViewAll={() => navigate('/transactions')}
+            />
+          </Grid>
+        </Grid>
+      </Stack>
     </Container>
   );
 };

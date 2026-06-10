@@ -1,13 +1,10 @@
 import { Routes, Route } from 'react-router-dom'
-import { Box, Typography, Card, CardContent, Grid, Button, Stack, Chip } from '@mui/material'
+import { Box, Typography, Card, CardActionArea, CardContent, Button, Stack, Chip } from '@mui/material'
 import {
   AccountBalanceWallet,
-  ArrowForward,
-  CheckCircle,
   Lock,
   Receipt,
   Send,
-  Share,
   Shield,
   SmartToy,
   SwapHoriz,
@@ -88,47 +85,107 @@ function App() {
     </Box>
   )
 
-  const primaryActions = [
+  const primaryFeatureCards = [
     {
-      title: 'Send money',
-      description: 'Move XLM quickly with a clear record of every transfer.',
+      title: 'Transactions',
+      helper: 'Send XLM',
       icon: <SwapHoriz sx={{ fontSize: 34 }} />,
       path: '/transactions',
     },
     {
-      title: 'Create an invoice',
-      description: 'Build a professional payment request for your client.',
+      title: 'Invoices',
+      helper: 'Request payment',
       icon: <Receipt sx={{ fontSize: 34 }} />,
       path: '/invoices',
     },
     {
-      title: 'Share a payment link',
-      description: 'Copy an invoice approval link your client can open and pay.',
-      icon: <Share sx={{ fontSize: 34 }} />,
-      path: '/invoices',
-    },
-    {
-      title: 'Protect a deal',
-      description: 'Hold funds safely until the agreed conditions are met.',
+      title: 'Escrow',
+      helper: 'Hold funds',
       icon: <Lock sx={{ fontSize: 34 }} />,
       path: '/escrow',
     },
   ]
 
-  const additionalTools = [
+  const secondaryFeatureCards = [
     {
-      label: 'P2P payments',
-      helper: 'Direct transfers between Stellar wallets',
-      icon: <AccountBalanceWallet />,
+      title: 'P2P Payments',
+      helper: 'Wallet to wallet',
+      icon: <AccountBalanceWallet sx={{ fontSize: 34 }} />,
       path: '/p2p',
     },
     {
-      label: 'X402 agent payments',
-      helper: 'Micropayments for AI and automated services',
-      icon: <SmartToy />,
+      title: 'X402',
+      helper: 'Agent payments',
+      icon: <SmartToy sx={{ fontSize: 34 }} />,
       path: '/x402',
     },
   ]
+
+  const renderFeatureCard = (
+    feature: typeof primaryFeatureCards[number],
+    size: 'primary' | 'secondary' = 'primary',
+  ) => (
+    <Card key={feature.title} sx={{ height: '100%', borderRadius: 2 }}>
+      <CardActionArea
+        onClick={() => openFeature(feature.path)}
+        sx={{
+          height: '100%',
+          p: 0,
+          '&:hover .feature-icon': {
+            bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.26)',
+          },
+        }}
+      >
+        <CardContent
+          sx={{
+            height: '100%',
+            p: { xs: 1.5, sm: 2, md: size === 'primary' ? 3 : 2.5 },
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: size === 'primary' ? 'column' : 'row' }}
+            spacing={{ xs: 1.25, sm: 2 }}
+            alignItems={{ xs: 'center', sm: size === 'primary' ? 'flex-start' : 'center' }}
+            textAlign={{ xs: 'center', sm: 'left' }}
+            sx={{ minHeight: size === 'primary' ? { xs: 118, sm: 168 } : { xs: 112, sm: 96 } }}
+          >
+            <Box
+              className="feature-icon"
+              sx={{
+                width: { xs: 46, md: size === 'primary' ? 64 : 54 },
+                height: { xs: 46, md: size === 'primary' ? 64 : 54 },
+                borderRadius: 2,
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                color: 'secondary.main',
+                bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
+                transition: 'background-color 0.2s ease',
+                '& svg': { fontSize: { xs: 28, md: size === 'primary' ? 36 : 30 } },
+              }}
+            >
+              {feature.icon}
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '1rem', md: size === 'primary' ? '1.45rem' : '1.2rem' },
+                  lineHeight: 1.18,
+                }}
+              >
+                {feature.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 500, fontSize: { xs: '0.78rem', md: '0.875rem' } }}>
+                {feature.helper}
+              </Typography>
+            </Box>
+          </Stack>
+        </CardContent>
+      </CardActionArea>
+    </Card>
+  )
 
   console.log('🏠 App render - wallet connected:', connected)
 
@@ -137,327 +194,144 @@ function App() {
       <Routes>
         <Route path="/" element={
           <Box sx={{ pb: { xs: 3, md: 6 }, overflow: 'hidden' }}>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.15fr) minmax(340px, 0.85fr)' },
-                gap: { xs: 3, md: 6 },
-                alignItems: 'center',
-                mb: { xs: 4, md: 7 },
-              }}
-            >
-              <Box>
-                <Chip
-                  icon={connected ? <CheckCircle /> : <Shield />}
-                  label={connected ? 'Wallet connected' : 'Freighter, Albedo, and WalletConnect supported'}
-                  color={connected ? 'success' : 'default'}
-                  sx={{
-                    mb: { xs: 2, md: 3 },
-                    px: 1,
-                    height: 'auto',
-                    maxWidth: '100%',
-                    alignItems: 'flex-start',
-                    '& .MuiChip-icon': { mt: { xs: '7px', sm: 0 } },
-                    '& .MuiChip-label': { whiteSpace: 'normal', py: { xs: 0.75, sm: 0 } },
-                  }}
-                />
-                <Typography
-                  variant="h2"
-                  component="h1"
-                  sx={{
-                    maxWidth: 760,
-                    mb: 2,
-                    fontSize: { xs: '2rem', sm: '2.6rem', md: '3.75rem' },
-                    lineHeight: { xs: 1.12, md: 1.06 },
-                    letterSpacing: 0,
-                  }}
-                >
-                  Welcome to simple, secure Stellar payments.
-                </Typography>
-                <Typography
-                  variant="h5"
-                  component="p"
-                  color="text.secondary"
-                  sx={{
-                    maxWidth: 700,
-                    mb: { xs: 3, md: 4 },
-                    fontSize: { xs: '1.05rem', md: '1.5rem' },
-                    fontWeight: 400,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Send money, protect deals with escrow, and collect invoices from one calm workspace built for everyday Stellar payments.
-                </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: { xs: 3, md: 4 } }}>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    endIcon={connected ? <ArrowForward /> : undefined}
-                    onClick={() => connected ? navigate('/dashboard') : openWalletDialog()}
-                    fullWidth
-                    sx={{ px: 4, py: 1.5, width: { sm: 'auto' } }}
+            {!connected ? (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.15fr) minmax(340px, 0.85fr)' },
+                  gap: { xs: 3, md: 6 },
+                  alignItems: 'center',
+                  mb: { xs: 4, md: 7 },
+                }}
+              >
+                <Box>
+                  <Chip
+                    icon={<Shield />}
+                    label="Freighter, Albedo, and WalletConnect supported"
+                    sx={{
+                      mb: { xs: 2, md: 3 },
+                      px: 1,
+                      height: 'auto',
+                      maxWidth: '100%',
+                      alignItems: 'flex-start',
+                      '& .MuiChip-icon': { mt: { xs: '7px', sm: 0 } },
+                      '& .MuiChip-label': { whiteSpace: 'normal', py: { xs: 0.75, sm: 0 } },
+                    }}
+                  />
+                  <Typography
+                    variant="h2"
+                    component="h1"
+                    sx={{
+                      maxWidth: 760,
+                      mb: 2,
+                      fontSize: { xs: '2rem', sm: '2.6rem', md: '3.75rem' },
+                      lineHeight: { xs: 1.12, md: 1.06 },
+                      letterSpacing: 0,
+                    }}
                   >
-                    {connected ? 'Open dashboard' : 'Connect wallet'}
-                  </Button>
-                  {connected && (
+                    Welcome to simple, secure Stellar payments.
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    component="p"
+                    color="text.secondary"
+                    sx={{
+                      maxWidth: 700,
+                      mb: { xs: 3, md: 4 },
+                      fontSize: { xs: '1.05rem', md: '1.5rem' },
+                      fontWeight: 400,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Connect your wallet to unlock Stellar payment tools.
+                  </Typography>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: { xs: 3, md: 4 } }}>
                     <Button
-                      variant="outlined"
+                      variant="contained"
                       size="large"
-                      onClick={() => navigate('/invoices')}
+                      onClick={openWalletDialog}
                       fullWidth
                       sx={{ px: 4, py: 1.5, width: { sm: 'auto' } }}
                     >
-                      Create invoice
+                      Connect wallet
                     </Button>
-                  )}
-                </Stack>
-                <Grid container spacing={{ xs: 1.25, sm: 2 }} sx={{ maxWidth: 760 }}>
-                  {[
-                    'Transparent transaction history',
-                    'Conditional escrow releases',
-                    'Shareable client payment links',
-                  ].map((item) => (
-                    <Grid item xs={12} sm={4} key={item}>
-                      <Stack direction="row" spacing={1.25} alignItems="center">
-                        <CheckCircle sx={{ color: 'success.main', fontSize: 20, flexShrink: 0 }} />
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          {item}
-                        </Typography>
-                      </Stack>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-
-              <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  p: { xs: 2, md: 3 },
-                  background: (theme) => theme.palette.mode === 'light'
-                    ? 'linear-gradient(145deg, rgba(255,255,255,0.96) 0%, rgba(245,241,237,0.92) 100%)'
-                    : 'linear-gradient(145deg, rgba(37,34,32,0.96) 0%, rgba(51,46,43,0.92) 100%)',
-                  boxShadow: { xs: 2, md: 4 },
-                }}
-              >
-                <Stack spacing={{ xs: 1.75, md: 2.25 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-                    <Box>
-                      <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
-                        Today at a glance
-                      </Typography>
-                      <Typography variant="h5" sx={{ mt: 0.5 }}>
-                        Ready when you are
-                      </Typography>
-                    </Box>
-                    <Send sx={{ color: 'secondary.main', fontSize: 34 }} />
                   </Stack>
-                  <Box
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(250,248,246,0.9)' : 'rgba(26,22,20,0.7)',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-                      Suggested next step
-                    </Typography>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      {connected ? 'Review your dashboard' : 'Connect your wallet to unlock features'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {connected
-                        ? 'Your payment tools are unlocked. Start with your dashboard or jump straight into a transfer.'
-                        : 'Payment, escrow, invoice, sharing, P2P, and X402 tools are disabled until your wallet is connected.'}
-                    </Typography>
-                  </Box>
-                  <Stack spacing={1.25}>
-                    {[
-                      ['Network', 'Stellar'],
-                      ['Fees', 'Low-cost transfers'],
-                      ['Controls', 'Payments, escrow, invoices'],
-                    ].map(([label, value]) => (
-                      <Stack
-                        key={label}
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        spacing={2}
-                        sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider' }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          {label}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 700, textAlign: 'right' }}>
-                          {value}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Stack>
-              </Box>
-            </Box>
-
-            {connected && (
-              <>
-                <Box sx={{ mb: 3 }}>
-                  <Typography
-                    variant="h4"
-                    component="h2"
-                    sx={{ mb: 1, fontSize: { xs: '1.55rem', md: '1.75rem' }, letterSpacing: 0 }}
-                  >
-                    What would you like to do?
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Choose the path that matches the payment job in front of you.
-                  </Typography>
                 </Box>
 
-                <Stack spacing={1.25} sx={{ display: { xs: 'flex', md: 'none' }, mb: 3 }}>
-                  {primaryActions.map((action) => (
-                    <Button
-                      key={action.title}
-                      onClick={() => openFeature(action.path)}
-                      startIcon={action.icon}
-                      endIcon={<ArrowForward />}
-                      sx={{
-                        justifyContent: 'space-between',
-                        p: 1.5,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        color: 'text.primary',
-                        textAlign: 'left',
-                        bgcolor: 'background.paper',
-                        '& .MuiButton-startIcon': {
-                          color: 'secondary.main',
-                          mr: 1.25,
-                          '& svg': { fontSize: 28 },
-                        },
-                      }}
-                    >
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography component="span" sx={{ display: 'block', fontWeight: 700 }}>
-                          {action.title}
-                        </Typography>
-                        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 400 }}>
-                          {action.description}
-                        </Typography>
-                      </Box>
-                    </Button>
-                  ))}
-                </Stack>
-
-                <Grid
-                  container
-                  spacing={3}
-                  sx={{ display: { xs: 'none', md: 'flex' }, mb: 4 }}
-                >
-                  {primaryActions.map((action) => (
-                    <Grid item md={3} key={action.title}>
-                      <Card
-                        sx={{
-                          height: '100%',
-                          cursor: 'pointer',
-                          borderRadius: 2,
-                          '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: 5,
-                            borderColor: 'secondary.main',
-                          },
-                        }}
-                        onClick={() => openFeature(action.path)}
-                      >
-                        <CardContent sx={{ p: 3, height: '100%' }}>
-                          <Stack
-                            spacing={2}
-                            alignItems="flex-start"
-                            sx={{ height: '100%' }}
-                          >
-                            <Box
-                              sx={{
-                                width: 58,
-                                height: 58,
-                                borderRadius: 2,
-                                display: 'grid',
-                                placeItems: 'center',
-                                flexShrink: 0,
-                                color: 'secondary.main',
-                                bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.18)',
-                                '& svg': { fontSize: 34 },
-                              }}
-                            >
-                              {action.icon}
-                            </Box>
-                            <Box sx={{ flexGrow: 1 }}>
-                              <Typography variant="h5" gutterBottom>
-                                {action.title}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {action.description}
-                              </Typography>
-                            </Box>
-                            <Button
-                              endIcon={<ArrowForward />}
-                              sx={{
-                                alignSelf: 'flex-start',
-                                px: 0,
-                              }}
-                              aria-label={`Open ${action.title}`}
-                            >
-                              Open
-                            </Button>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-
-                <Stack
-                  direction={{ xs: 'column', md: 'row' }}
-                  spacing={2}
+                <Box
                   sx={{
-                    p: { xs: 1.5, md: 2.5 },
-                    borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
-                    bgcolor: 'background.paper',
+                    borderRadius: 2,
+                    p: { xs: 2, md: 3 },
+                    background: (theme) => theme.palette.mode === 'light'
+                      ? 'linear-gradient(145deg, rgba(255,255,255,0.96) 0%, rgba(245,241,237,0.92) 100%)'
+                      : 'linear-gradient(145deg, rgba(37,34,32,0.96) 0%, rgba(51,46,43,0.92) 100%)',
+                    boxShadow: { xs: 2, md: 4 },
                   }}
                 >
-                  {additionalTools.map((tool) => (
-                    <Button
-                      key={tool.label}
-                      onClick={() => openFeature(tool.path)}
-                      startIcon={tool.icon}
-                      endIcon={<ArrowForward />}
-                      sx={{
-                        flex: 1,
-                        justifyContent: 'space-between',
-                        p: { xs: 1.5, md: 2 },
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        color: 'text.primary',
-                        textAlign: 'left',
-                        '& .MuiButton-startIcon': { color: 'secondary.main' },
-                      }}
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        <Typography component="span" sx={{ display: 'block', fontWeight: 700 }}>
-                          {tool.label}
+                  <Stack spacing={{ xs: 1.75, md: 2.25 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                      <Box>
+                        <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
+                          Wallet required
                         </Typography>
-                        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', fontWeight: 400 }}>
-                          {tool.helper}
+                        <Typography variant="h5" sx={{ mt: 0.5 }}>
+                          Ready when you are
                         </Typography>
                       </Box>
-                    </Button>
-                  ))}
-                </Stack>
-              </>
+                      <Send sx={{ color: 'secondary.main', fontSize: 34 }} />
+                    </Stack>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(250,248,246,0.9)' : 'rgba(26,22,20,0.7)',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Typography variant="h6">
+                        Connect your wallet to unlock features
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Box>
+            ) : (
+              <Stack spacing={{ xs: 2.5, md: 3.5 }}>
+                <Box>
+                  <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>
+                    Start here
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' },
+                      gap: { xs: 1.5, md: 2.5 },
+                      mt: 1,
+                    }}
+                  >
+                    {primaryFeatureCards.map((feature) => renderFeatureCard(feature))}
+                  </Box>
+                </Box>
+
+                <Box>
+                  <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>
+                    More tools
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))' },
+                      gap: { xs: 1.5, md: 2.5 },
+                      mt: 1,
+                    }}
+                  >
+                    {secondaryFeatureCards.map((feature) => renderFeatureCard(feature, 'secondary'))}
+                  </Box>
+                </Box>
+              </Stack>
             )}
           </Box>
         } />
