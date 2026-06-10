@@ -4,7 +4,7 @@
  * Handles invoice creation, approval workflow, and client portal access
  */
 
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { InvoiceRepository, NotificationRepository, InvoiceLineItemRepository, UserRepository } from '../repositories';
 import { AuthRequest } from '../middleware/auth';
 import { AppError, asyncHandler } from '../middleware/errorHandler';
@@ -26,11 +26,42 @@ const lineItemRepository = new InvoiceLineItemRepository(prisma);
 const userRepository = new UserRepository(prisma);
 const invitationService = new InvitationService(notificationRepository, userRepository);
 
-function getClientPortalUrl(): string {
-  const baseUrl =
-    process.env['CLIENT_PORTAL_URL'] ||
-    (process.env['FRONTEND_URL'] ? `${process.env['FRONTEND_URL']}/client` : 'http://localhost:3000/client');
-  return baseUrl.replace(/\/$/, '');
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/$/, '');
+}
+
+function getRequestOrigin(req: Request): string | null {
+  const origin = req.get('origin');
+  if (origin) return origin;
+
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch {
+      return null;
+    }
+  }
+
+  const host = req.get('x-forwarded-host') || req.get('host');
+  if (!host) return null;
+
+  const protoHeader = req.get('x-forwarded-proto');
+  const protocol = protoHeader?.split(',')[0]?.trim() || req.protocol || 'http';
+  return `${protocol}://${host}`;
+}
+
+function getClientPortalUrl(req?: Request): string {
+  if (process.env['CLIENT_PORTAL_URL']) {
+    return stripTrailingSlash(process.env['CLIENT_PORTAL_URL']);
+  }
+
+  if (process.env['FRONTEND_URL']) {
+    return `${stripTrailingSlash(process.env['FRONTEND_URL'])}/client`;
+  }
+
+  const requestOrigin = req ? getRequestOrigin(req) : null;
+  return `${stripTrailingSlash(requestOrigin || 'http://localhost:3000')}/client`;
 }
 
 async function sendInvoiceInvitation(
@@ -43,9 +74,10 @@ async function sendInvoiceInvitation(
     dueDate: Date;
     approvalToken: string;
   },
-  senderName: string
+  senderName: string,
+  req?: Request
 ): Promise<InvitationDeliveryResult & { approvalUrl?: string }> {
-  const approvalUrl = `${getClientPortalUrl()}/invoice/${invoice.approvalToken}`;
+  const approvalUrl = `${getClientPortalUrl(req)}/invoice/${invoice.approvalToken}`;
   try {
     const clientUser = await invitationService.findUserByEmail(invoice.clientEmail);
     const amount = Number(invoice.totalAmount ?? invoice.amount ?? 0).toFixed(7);
@@ -127,7 +159,7 @@ export const createInvoice = asyncHandler(async (req: AuthRequest, res: Response
   });
 
   logger.info(`Invoice created: ${invoice.id} for ${clientEmail}`);
-  const invitationDelivery = await sendInvoiceInvitation(invoice, req.user.walletAddress);
+  const invitationDelivery = await sendInvoiceInvitation(invoice, req.user.walletAddress, req);
   const responseInvoice =
     invitationDelivery.emailStatus === 'sent'
       ? await invoiceRepository.updateStatus(invoice.id, { status: InvoiceStatus.SENT })

@@ -1,8 +1,16 @@
 // API Configuration
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
 
+const getDefaultClientPortalUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/client`
+  }
+
+  return 'http://localhost:3000/client'
+}
+
 export const API_BASE_URL = getApiBaseUrl()
-export const CLIENT_PORTAL_URL = import.meta.env.VITE_CLIENT_PORTAL_URL || 'http://localhost:3000/client'
+export const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || getDefaultClientPortalUrl()).replace(/\/+$/, '')
 
 // Stellar Network Configuration
 export const STELLAR_NETWORK = import.meta.env.VITE_STELLAR_NETWORK || 'testnet'
