@@ -1,5 +1,26 @@
 services:
   - type: web
+    name: stellarpath
+    runtime: static
+    buildCommand: npm ci && npm run build --workspace=frontend
+    staticPublishPath: packages/frontend/dist
+    buildFilter:
+      paths:
+        - package.json
+        - package-lock.json
+        - render.yaml
+        - packages/frontend/**
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://stellapathbackend.onrender.com/api
+      - key: VITE_CLIENT_PORTAL_URL
+        value: https://stellapath.onrender.com/client
+
+  - type: web
     name: stellarpath-backend
     runtime: node
     plan: starter

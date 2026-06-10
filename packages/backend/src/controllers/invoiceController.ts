@@ -385,7 +385,7 @@ export const validateApprovalToken = asyncHandler(async (req: AuthRequest, res: 
     throw new AppError('Approval token is required', 400);
   }
 
-  const invoice = await invoiceRepository.findByApprovalToken(approvalToken);
+  const invoice = await invoiceRepository.findByApprovalTokenOrId(approvalToken);
   
   if (!invoice) {
     res.json({
@@ -428,7 +428,7 @@ export const approveInvoice = asyncHandler(async (req: AuthRequest, res: Respons
     throw new AppError('Approval token is required', 400);
   }
 
-  const invoice = await invoiceRepository.findByApprovalToken(approvalToken);
+  const invoice = await invoiceRepository.findByApprovalTokenOrId(approvalToken);
   if (!invoice) {
     throw new AppError('Invoice not found or invalid token', 404);
   }
@@ -500,7 +500,7 @@ export const rejectInvoice = asyncHandler(async (req: AuthRequest, res: Response
     throw new AppError('Approval token is required', 400);
   }
 
-  const invoice = await invoiceRepository.findByApprovalToken(approvalToken);
+  const invoice = await invoiceRepository.findByApprovalTokenOrId(approvalToken);
   if (!invoice) {
     throw new AppError('Invoice not found or invalid token', 404);
   }

@@ -112,6 +112,32 @@ export class InvoiceRepository {
     return invoice ? this.mapToInvoice(invoice) : null;
   }
 
+  async findByApprovalTokenOrId(tokenOrId: string): Promise<InvoiceRecord | null> {
+    const invoice = await this.prisma.invoiceRecord.findFirst({
+      where: {
+        OR: [
+          { approvalToken: tokenOrId },
+          { id: tokenOrId }
+        ]
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            walletAddress: true,
+            displayName: true,
+            email: true
+          }
+        },
+        lineItems: {
+          orderBy: { sortOrder: 'asc' }
+        }
+      }
+    });
+
+    return invoice ? this.mapToInvoice(invoice) : null;
+  }
+
   async findByCreatorId(
     creatorId: string,
     filters?: InvoiceFilters,
@@ -268,9 +294,14 @@ export class InvoiceRepository {
     return result.count;
   }
 
-  async getPublicInvoice(approvalToken: string): Promise<PublicInvoice | null> {
-    const invoice = await this.prisma.invoiceRecord.findUnique({
-      where: { approvalToken },
+  async getPublicInvoice(tokenOrId: string): Promise<PublicInvoice | null> {
+    const invoice = await this.prisma.invoiceRecord.findFirst({
+      where: {
+        OR: [
+          { approvalToken: tokenOrId },
+          { id: tokenOrId }
+        ]
+      },
       include: {
         creator: {
           select: {
