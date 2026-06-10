@@ -31,6 +31,12 @@ services:
         value: https://stellapath.onrender.com
       - key: CLIENT_PORTAL_URL
         value: https://stellapath.onrender.com/client
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: StellaPath
       - key: API_BASE_URL
         value: https://stellapathbackend.onrender.com
       - key: STELLAR_NETWORK

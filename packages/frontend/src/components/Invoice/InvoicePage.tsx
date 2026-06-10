@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Box, Tabs, Tab, Paper, Alert, Snackbar, Typography } from '@mui/material'
+import { Box, Tabs, Tab, Paper, Alert, Snackbar, Typography, Button, Stack } from '@mui/material'
 import type { AlertColor } from '@mui/material'
 import { BackButton } from '../Common/BackButton'
 import { useAppSelector, useAppDispatch } from '../../store/hooks'
@@ -39,6 +39,7 @@ interface InvitationDelivery {
   emailStatus: 'sent' | 'failed' | 'skipped'
   error?: string
   approvalUrl?: string
+  messageId?: string
 }
 
 interface InvoiceCreateResponse {
@@ -53,6 +54,7 @@ export const InvoicePage = () => {
   const [activeTab, setActiveTab] = useState(0)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [messageSeverity, setMessageSeverity] = useState<AlertColor>('success')
+  const [deliveryWarning, setDeliveryWarning] = useState<InvitationDelivery | null>(null)
 
   useEffect(() => {
     if (connected && accountId) {
@@ -108,11 +110,17 @@ export const InvoicePage = () => {
         }))
         if (invitationDelivery?.emailStatus === 'sent') {
           setMessageSeverity('success')
-          setSuccessMessage('Invoice created and invitation email sent.')
+          setSuccessMessage(
+            invitationDelivery.messageId
+              ? `Invoice created and invitation email sent. Message ID: ${invitationDelivery.messageId}`
+              : 'Invoice created and invitation email sent.'
+          )
+          setDeliveryWarning(null)
         } else {
           const deliveryError = invitationDelivery?.error ? ` ${invitationDelivery.error}` : ''
           setMessageSeverity('warning')
           setSuccessMessage(`Invoice created, but the invitation email was not sent.${deliveryError}`)
+          setDeliveryWarning(invitationDelivery || { emailStatus: 'failed', error: 'Invitation email was not sent' })
         }
         setActiveTab(1)
       } else {
@@ -196,6 +204,40 @@ export const InvoicePage = () => {
     <Box>
       <BackButton />
       {walletBanner}
+      {deliveryWarning && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 3 }}
+          action={
+            deliveryWarning.approvalUrl ? (
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => navigator.clipboard?.writeText(deliveryWarning.approvalUrl || '')}
+              >
+                Copy link
+              </Button>
+            ) : undefined
+          }
+          onClose={() => setDeliveryWarning(null)}
+        >
+          <Stack spacing={0.75}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              Invoice was created, but the email was not sent.
+            </Typography>
+            {deliveryWarning.error && (
+              <Typography variant="body2">
+                {deliveryWarning.error}
+              </Typography>
+            )}
+            {deliveryWarning.approvalUrl && (
+              <Typography variant="caption" sx={{ wordBreak: 'break-all' }}>
+                Client link: {deliveryWarning.approvalUrl}
+              </Typography>
+            )}
+          </Stack>
+        </Alert>
+      )}
       <Paper elevation={3} sx={{ mb: 4, borderRadius: 2, overflow: 'hidden' }}>
         <Tabs
           value={activeTab}
@@ -230,7 +272,7 @@ export const InvoicePage = () => {
 
       <Snackbar
         open={!!successMessage}
-        autoHideDuration={6000}
+        autoHideDuration={messageSeverity === 'warning' ? 12000 : 6000}
         onClose={() => setSuccessMessage(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
