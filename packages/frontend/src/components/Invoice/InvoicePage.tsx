@@ -65,6 +65,11 @@ export const InvoicePage = () => {
   const fetchInvoices = async () => {
     dispatch(setLoading(true))
     try {
+      if (!localStorage.getItem('authToken')) {
+        dispatch(setError('Wallet is connected, but your app session needs to be refreshed. Disconnect and reconnect your wallet to load invoices.'))
+        return
+      }
+
       const response = await apiClient.get<{ invoices: InvoiceListItem[] }>('/invoices')
       const invoices = response.data?.invoices ?? (response as typeof response & { invoices?: InvoiceListItem[] }).invoices
       if (response.success && invoices) {
@@ -74,6 +79,8 @@ export const InvoicePage = () => {
       }
     } catch {
       dispatch(setError('Failed to fetch invoices'))
+    } finally {
+      dispatch(setLoading(false))
     }
   }
 

@@ -104,27 +104,9 @@ export const useWallet = (): UseWalletReturn => {
       }
     }
 
-    const handleAuthLogout = (evt: Event) => {
-      // Only respond to our namespaced logout events with a valid payload
-      const detail = (evt as CustomEvent)?.detail
-      if (!detail || typeof detail.status !== 'number' || detail.source !== 'apiClient') {
-        console.warn('Ignored auth logout event with invalid payload', detail)
-        return
-      }
-
-      console.warn('Auth token expired/invalid, forcing wallet disconnect')
-      // When auth token is invalid/expired, clear wallet connection state so the user can reconnect.
-      disconnect()
-    }
-
     loadAvailableWallets()
     validatePersistedConnection()
-
-    window.addEventListener('stellarpath:auth:logout', handleAuthLogout)
-    return () => {
-      window.removeEventListener('stellarpath:auth:logout', handleAuthLogout)
-    }
-  }, [dispatch, walletState.connected, walletState.walletType, disconnect])
+  }, [dispatch, walletState.connected, walletState.walletType])
 
   /**
    * Connect to wallet

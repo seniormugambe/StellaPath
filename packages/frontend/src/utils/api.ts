@@ -90,15 +90,12 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        // If auth fails for any reason (missing/expired/invalid token), clear stored token so we don't keep sending it.
-        // Components can listen for this and react (e.g., by re-authenticating).
+        // If backend auth fails, clear only the API token so we do not keep
+        // sending a stale JWT. The wallet connection is independent from the
+        // backend session and should not be torn down by an API response.
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.removeItem('authToken')
           console.warn('API request unauthorized - token may be expired or missing')
-
-          // Broadcast an event so other parts of the app can react (e.g., disconnect wallet / prompt re-login)
-          // Namespace the event to avoid collisions with other extensions/scripts
-          window.dispatchEvent(new CustomEvent('stellarpath:auth:logout', { detail: { status: error.response.status, source: 'apiClient' } }))
         }
         return Promise.reject(error)
       }
